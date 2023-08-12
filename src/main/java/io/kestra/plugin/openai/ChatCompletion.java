@@ -5,6 +5,7 @@ import com.theokanning.openai.completion.chat.ChatCompletionChoice;
 import com.theokanning.openai.completion.chat.ChatCompletionRequest;
 import com.theokanning.openai.completion.chat.ChatCompletionResult;
 import com.theokanning.openai.completion.chat.ChatMessage;
+import com.theokanning.openai.completion.chat.ChatFunction;
 import com.theokanning.openai.service.OpenAiService;
 import io.kestra.core.exceptions.IllegalVariableEvaluationException;
 import io.kestra.core.models.annotations.Example;
@@ -66,6 +67,12 @@ public class ChatCompletion extends AbstractTask implements RunnableTask<ChatCom
     )
     @PluginProperty
     private List<ChatMessage> messages;
+
+    @Schema(
+        title = "The function call(s) the API can use when generating completions."
+    )
+    @PluginProperty
+    private List<ChatFunction> functions;
 
     @Schema(
         title = "The prompt(s) to generate completions for. By default, this prompt will be sent as a `user` role.",
