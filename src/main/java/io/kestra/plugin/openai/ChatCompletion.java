@@ -1,13 +1,9 @@
 package io.kestra.plugin.openai;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.theokanning.openai.Usage;
-import com.theokanning.openai.completion.chat.ChatCompletionChoice;
-import com.theokanning.openai.completion.chat.ChatCompletionRequest;
-import com.theokanning.openai.completion.chat.ChatCompletionResult;
-import com.theokanning.openai.completion.chat.ChatMessage;
-import com.theokanning.openai.completion.chat.ChatFunction;
+import com.theokanning.openai.completion.chat.*;
 import com.theokanning.openai.service.OpenAiService;
-import io.kestra.core.exceptions.IllegalVariableEvaluationException;
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.annotations.PluginProperty;
@@ -72,7 +68,14 @@ public class ChatCompletion extends AbstractTask implements RunnableTask<ChatCom
         title = "The function call(s) the API can use when generating completions."
     )
     @PluginProperty
-    private List<ChatFunction> functions;
+    private List<PluginChatFunction> functions;
+
+    @Schema(
+        title = "The name of the function OpenAI should generate a call for.",
+        description = "Enter a specific function name, or 'auto' to let the model decide. The default is auto."
+    )
+    @PluginProperty
+    private String functionCall;
 
     @Schema(
         title = "The prompt(s) to generate completions for. By default, this prompt will be sent as a `user` role.",
@@ -160,8 +163,20 @@ public class ChatCompletion extends AbstractTask implements RunnableTask<ChatCom
             messages.add(buildMessage("user", runContext.render(this.prompt)));
         }
 
+        List<ChatFunction> chatFunctions = null;
+        if (this.functions != null) {
+            chatFunctions = functions.stream().map(f -> (ChatFunction)f).toList();
+        }
+
+        ChatCompletionRequest.ChatCompletionRequestFunctionCall chatFunctionCall = null;
+        if (this.functionCall == null) {
+            chatFunctionCall = ChatCompletionRequest.ChatCompletionRequestFunctionCall.of(this.functionCall);
+        }
+
         ChatCompletionResult chatCompletionResult = client.createChatCompletion(ChatCompletionRequest.builder()
             .messages(messages)
+            .functions(chatFunctions)
+            .functionCall(chatFunctionCall)
             .model(model)
             .temperature(this.temperature)
             .topP(this.topP)
@@ -215,6 +230,32 @@ public class ChatCompletion extends AbstractTask implements RunnableTask<ChatCom
             title = "The API usage for this request."
         )
         private Usage usage;
+    }
+
+    @Getter
+    public static class PluginChatFunction extends ChatFunction {
+        @Schema(
+            title = "The name of the function"
+        )
+        private String name;
+
+        @Schema(
+            title = "A description of what the function does."
+        )
+        private String description;
+
+        @Schema(
+            title = "The parameters",
+            description = "See OpenAI docs"
+        )
+        private JsonNode parameters;
+
+        public PluginChatFunction(@NonNull String name, @NonNull String description, @NonNull JsonNode parameters) {
+            super(name);
+            this.name = name;
+            this.description = description;
+            this.parameters = parameters;
+        }
     }
 
     private ChatMessage buildMessage(String role, String content) {
