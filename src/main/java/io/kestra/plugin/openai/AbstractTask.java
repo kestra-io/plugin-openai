@@ -4,11 +4,10 @@ import com.theokanning.openai.service.OpenAiService;
 import io.kestra.core.exceptions.IllegalVariableEvaluationException;
 import io.kestra.core.models.tasks.Task;
 import io.kestra.core.runners.RunContext;
-import lombok.EqualsAndHashCode;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.ToString;
+import lombok.*;
 import lombok.experimental.SuperBuilder;
+
+import java.time.Duration;
 
 @SuperBuilder
 @ToString
@@ -20,9 +19,12 @@ public abstract class AbstractTask extends Task implements OpenAiInterface{
 
     protected String user;
 
+    @Builder.Default
+    protected long clientTimeout = 10;
+
     protected OpenAiService client(RunContext runContext) throws IllegalVariableEvaluationException {
         String apiKey = runContext.render(this.apiKey);
 
-        return new OpenAiService(apiKey);
+        return new OpenAiService(apiKey, Duration.ofSeconds(clientTimeout));
     }
 }
