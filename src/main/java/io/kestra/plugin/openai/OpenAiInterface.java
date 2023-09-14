@@ -18,4 +18,9 @@ public interface OpenAiInterface {
     )
     @PluginProperty(dynamic = true)
     String getUser();
+
+    @Schema(
+        title = "The maximum number of seconds to wait for a response."
+    )
+    long getClientTimeout();
 }
