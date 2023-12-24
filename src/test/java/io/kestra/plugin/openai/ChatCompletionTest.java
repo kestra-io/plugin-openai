@@ -17,7 +17,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.*;
+import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.is;
 
 
 @MicronautTest
@@ -38,7 +39,8 @@ public class ChatCompletionTest {
 
         ChatCompletion task = ChatCompletion.builder()
             .apiKey(this.apiKey)
-            .model("gpt-3.5-turbo")
+            .model("gpt-3.5-turbo-0613")
+            .clientTimeout(30)
             .messages(messages)
             .build();
 
