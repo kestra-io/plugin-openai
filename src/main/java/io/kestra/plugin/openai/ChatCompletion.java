@@ -15,9 +15,7 @@ import lombok.*;
 import lombok.experimental.SuperBuilder;
 
 import javax.validation.constraints.NotNull;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @SuperBuilder
 @ToString
@@ -67,7 +65,7 @@ public class ChatCompletion extends AbstractTask implements RunnableTask<ChatCom
     @Schema(
         title = "The function call(s) the API can use when generating completions."
     )
-    @PluginProperty
+    @PluginProperty(dynamic = true)
     private List<PluginChatFunction> functions;
 
     @Schema(
@@ -159,18 +157,45 @@ public class ChatCompletion extends AbstractTask implements RunnableTask<ChatCom
                 messages.add(message);
             }
         }
+
         if (this.prompt != null) {
             messages.add(buildMessage("user", runContext.render(this.prompt)));
         }
 
-        List<ChatFunction> chatFunctions = null;
+        List<ChatFunctionDynamic> chatFunctions = new ArrayList<>();
+
         if (this.functions != null) {
-            chatFunctions = functions.stream().map(f -> (ChatFunction)f).toList();
+            for (PluginChatFunction function : functions) {
+                var chatParameters = new ChatFunctionParameters();
+
+                if(function.parameters != null) {
+                    for (PluginChatFunctionParameter parameter : function.parameters) {
+                        chatParameters.addProperty(ChatFunctionProperty.builder()
+                            .name(runContext.render(parameter.name))
+                            .description(runContext.render(parameter.description))
+                            .type(runContext.render(parameter.type))
+                            .required(parameter.required)
+                            .enumValues(parameter.enumValues == null ? null :
+                                new HashSet<>(runContext.render(parameter.enumValues)))
+                            .build()
+                        );
+                    }
+                }
+
+                ChatFunctionDynamic chatFunction = ChatFunctionDynamic.builder()
+                    .name(runContext.render(function.name))
+                    .description(runContext.render(function.description))
+                    .parameters(chatParameters).build();
+
+                chatFunctions.add(chatFunction);
+            }
         }
 
         ChatCompletionRequest.ChatCompletionRequestFunctionCall chatFunctionCall = null;
-        if (this.functionCall == null) {
-            chatFunctionCall = ChatCompletionRequest.ChatCompletionRequestFunctionCall.of(this.functionCall);
+        if (this.functionCall != null) {
+            chatFunctionCall = ChatCompletionRequest.ChatCompletionRequestFunctionCall.of(
+                runContext.render(this.functionCall)
+            );
         }
 
         ChatCompletionResult chatCompletionResult = client.createChatCompletion(ChatCompletionRequest.builder()
@@ -232,10 +257,47 @@ public class ChatCompletion extends AbstractTask implements RunnableTask<ChatCom
         private Usage usage;
     }
 
+    @Builder
     @Getter
-    public static class PluginChatFunction extends ChatFunction {
+    public static class PluginChatFunctionParameter {
         @Schema(
-            title = "The name of the function"
+            title = "The name of the function parameter."
+        )
+        @NotNull
+        private String name;
+
+        @Schema(
+            title = "A description of the function parameter.",
+            description = "Provide as many details as possible to ensure the model returns an accurate parameter."
+        )
+        @NotNull
+        private String description;
+
+        @Schema(
+            title = "The OpenAPI data type of the parameter.",
+            description = "Valid types are string, number, integer, boolean, array, object"
+        )
+        @NotNull
+        private String type;
+
+        @Schema(
+            title = "A list of values that the model *must* choose from when setting this parameter.",
+            description = "Optional, but useful when for classification problems."
+        )
+        private List<String> enumValues;
+
+        @Schema(
+            title = "Whether or not the model is required to provide this parameter.",
+            description = "Defaults to false."
+        )
+        private boolean required;
+    }
+
+    @Builder
+    @Getter
+    public static class PluginChatFunction {
+        @Schema(
+            title = "The name of the function."
         )
         private String name;
 
@@ -245,17 +307,9 @@ public class ChatCompletion extends AbstractTask implements RunnableTask<ChatCom
         private String description;
 
         @Schema(
-            title = "The parameters",
-            description = "See OpenAI docs"
+            title = "The function's parameters."
         )
-        private JsonNode parameters;
-
-        public PluginChatFunction(@NonNull String name, @NonNull String description, @NonNull JsonNode parameters) {
-            super(name);
-            this.name = name;
-            this.description = description;
-            this.parameters = parameters;
-        }
+        private List<PluginChatFunctionParameter> parameters;
     }
 
     private ChatMessage buildMessage(String role, String content) {
