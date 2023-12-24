@@ -125,7 +125,7 @@ public class ChatCompletionTest {
 
         ChatCompletion task = ChatCompletion.builder()
             .apiKey(this.apiKey)
-            .model("gpt-3.5-turbo-0613")
+            .model("gpt-3.5-turbo")
             .messages(messages)
             .functions(functions)
             .functionCall("auto")
