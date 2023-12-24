@@ -51,6 +51,52 @@ import java.util.*;
                 "    type: io.kestra.core.tasks.debugs.Return",
                 "    format: \"{{outputs.completion.choices[0].message.content}}\""
             }
+        ),
+        @Example(
+            title = "Based on a prompt input, ask OpenAI to call a function that determines whether you need to " +
+                "respond to a customer's review immediately or wait until later, and then comes up with a " +
+                "suggested response.",
+            full = true,
+            code = {
+                "id: openAI",
+                "namespace: dev",
+                "",
+                "inputs:",
+                "  - name: prompt",
+                "    type: STRING",
+                "    defaults: I love your product and would purchase it again!",
+                "",
+                "tasks:",
+                "  - id: prioritize_response",
+                "    type: io.kestra.plugin.openai.ChatCompletion",
+                "    apiKey: \"yourOpenAIapiKey\"",
+                "    model: gpt-3.5-turbo",
+                "    messages:",
+                "      - role: user",
+                "        content: \"{{inputs.prompt}}\"",
+                "    functions:",
+                "      - name: respond_to_review",
+                "        type: string",
+                "        description: Given the customer product review provided as input, determines how urgently a ",
+                "                     reply is required and then provides suggested response text.",
+                "        parameters:",
+                "          - name: response_urgency",
+                "            description: How urgently this customer review needs a reply. Bad reviews ",
+                "                         must be addressed immediately before anyone sees them. Good reviews can ",
+                "                         wait until later.",
+                "            required: true",
+                "            enumValues: ",
+                "              - reply_immediately",
+                "              - reply_later",
+                "          - name: response_text",
+                "            description: The text to post online in response to this review.",
+                "            type: string",
+                "            required: true",
+                "",
+                "  - id: response",
+                "    type: io.kestra.core.tasks.debugs.Return",
+                "    format: \"{{outputs.completion.choices[0].message.function_call}}\""
+            }
         )
     }
 )
