@@ -1,6 +1,5 @@
 package io.kestra.plugin.openai;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import com.theokanning.openai.Usage;
 import com.theokanning.openai.completion.chat.*;
 import com.theokanning.openai.service.OpenAiService;
@@ -15,7 +14,10 @@ import lombok.*;
 import lombok.experimental.SuperBuilder;
 
 import javax.validation.constraints.NotNull;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
 
 @SuperBuilder
 @ToString
@@ -111,7 +113,6 @@ public class ChatCompletion extends AbstractTask implements RunnableTask<ChatCom
     @Schema(
         title = "The function call(s) the API can use when generating completions."
     )
-    @PluginProperty(dynamic = true)
     private List<PluginChatFunction> functions;
 
     @Schema(
@@ -208,9 +209,10 @@ public class ChatCompletion extends AbstractTask implements RunnableTask<ChatCom
             messages.add(buildMessage("user", runContext.render(this.prompt)));
         }
 
-        List<ChatFunctionDynamic> chatFunctions = new ArrayList<>();
+        List<ChatFunctionDynamic> chatFunctions = null;
 
         if (this.functions != null) {
+            chatFunctions = new ArrayList<>();
             for (PluginChatFunction function : functions) {
                 var chatParameters = new ChatFunctionParameters();
 
@@ -238,9 +240,10 @@ public class ChatCompletion extends AbstractTask implements RunnableTask<ChatCom
         }
 
         ChatCompletionRequest.ChatCompletionRequestFunctionCall chatFunctionCall = null;
+
         if (this.functionCall != null) {
             chatFunctionCall = ChatCompletionRequest.ChatCompletionRequestFunctionCall.of(
-                runContext.render(this.functionCall)
+                this.functionCall
             );
         }
 
@@ -310,6 +313,7 @@ public class ChatCompletion extends AbstractTask implements RunnableTask<ChatCom
             title = "The name of the function parameter."
         )
         @NotNull
+        @PluginProperty(dynamic = true)
         private String name;
 
         @Schema(
@@ -317,6 +321,7 @@ public class ChatCompletion extends AbstractTask implements RunnableTask<ChatCom
             description = "Provide as many details as possible to ensure the model returns an accurate parameter."
         )
         @NotNull
+        @PluginProperty(dynamic = true)
         private String description;
 
         @Schema(
@@ -324,12 +329,14 @@ public class ChatCompletion extends AbstractTask implements RunnableTask<ChatCom
             description = "Valid types are string, number, integer, boolean, array, object"
         )
         @NotNull
+        @PluginProperty(dynamic = true)
         private String type;
 
         @Schema(
             title = "A list of values that the model *must* choose from when setting this parameter.",
             description = "Optional, but useful when for classification problems."
         )
+        @PluginProperty(dynamic = true)
         private List<String> enumValues;
 
         @Schema(
@@ -345,11 +352,13 @@ public class ChatCompletion extends AbstractTask implements RunnableTask<ChatCom
         @Schema(
             title = "The name of the function."
         )
+        @PluginProperty(dynamic = true)
         private String name;
 
         @Schema(
             title = "A description of what the function does."
         )
+        @PluginProperty(dynamic = true)
         private String description;
 
         @Schema(

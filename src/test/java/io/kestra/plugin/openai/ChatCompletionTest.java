@@ -1,11 +1,7 @@
 package io.kestra.plugin.openai;
 
-import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-
-import com.theokanning.openai.completion.chat.*;
-import com.theokanning.openai.service.OpenAiService;
+import com.theokanning.openai.completion.chat.ChatFunctionCall;
+import com.theokanning.openai.completion.chat.ChatMessage;
 import io.kestra.core.runners.RunContext;
 import io.kestra.core.runners.RunContextFactory;
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
@@ -13,7 +9,6 @@ import jakarta.inject.Inject;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
-import java.util.ArrayList;
 import java.util.List;
 
 import static org.hamcrest.MatcherAssert.assertThat;
