@@ -1,12 +1,8 @@
 package io.kestra.plugin.openai;
 
 import com.theokanning.openai.Usage;
-import com.theokanning.openai.completion.chat.ChatCompletionChoice;
-import com.theokanning.openai.completion.chat.ChatCompletionRequest;
-import com.theokanning.openai.completion.chat.ChatCompletionResult;
-import com.theokanning.openai.completion.chat.ChatMessage;
+import com.theokanning.openai.completion.chat.*;
 import com.theokanning.openai.service.OpenAiService;
-import io.kestra.core.exceptions.IllegalVariableEvaluationException;
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.annotations.PluginProperty;
@@ -19,6 +15,7 @@ import lombok.experimental.SuperBuilder;
 
 import javax.validation.constraints.NotNull;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 
@@ -56,6 +53,52 @@ import java.util.Map;
                 "    type: io.kestra.core.tasks.debugs.Return",
                 "    format: \"{{outputs.completion.choices[0].message.content}}\""
             }
+        ),
+        @Example(
+            title = "Based on a prompt input, ask OpenAI to call a function that determines whether you need to " +
+                "respond to a customer's review immediately or wait until later, and then comes up with a " +
+                "suggested response.",
+            full = true,
+            code = {
+                "id: openAI",
+                "namespace: dev",
+                "",
+                "inputs:",
+                "  - name: prompt",
+                "    type: STRING",
+                "    defaults: I love your product and would purchase it again!",
+                "",
+                "tasks:",
+                "  - id: prioritize_response",
+                "    type: io.kestra.plugin.openai.ChatCompletion",
+                "    apiKey: \"yourOpenAIapiKey\"",
+                "    model: gpt-3.5-turbo",
+                "    messages:",
+                "      - role: user",
+                "        content: \"{{inputs.prompt}}\"",
+                "    functions:",
+                "      - name: respond_to_review",
+                "        type: string",
+                "        description: Given the customer product review provided as input, determines how urgently a ",
+                "                     reply is required and then provides suggested response text.",
+                "        parameters:",
+                "          - name: response_urgency",
+                "            description: How urgently this customer review needs a reply. Bad reviews ",
+                "                         must be addressed immediately before anyone sees them. Good reviews can ",
+                "                         wait until later.",
+                "            required: true",
+                "            enumValues: ",
+                "              - reply_immediately",
+                "              - reply_later",
+                "          - name: response_text",
+                "            description: The text to post online in response to this review.",
+                "            type: string",
+                "            required: true",
+                "",
+                "  - id: response",
+                "    type: io.kestra.core.tasks.debugs.Return",
+                "    format: \"{{outputs.completion.choices[0].message.function_call}}\""
+            }
         )
     }
 )
@@ -66,6 +109,18 @@ public class ChatCompletion extends AbstractTask implements RunnableTask<ChatCom
     )
     @PluginProperty
     private List<ChatMessage> messages;
+
+    @Schema(
+        title = "The function call(s) the API can use when generating completions."
+    )
+    private List<PluginChatFunction> functions;
+
+    @Schema(
+        title = "The name of the function OpenAI should generate a call for.",
+        description = "Enter a specific function name, or 'auto' to let the model decide. The default is auto."
+    )
+    @PluginProperty
+    private String functionCall;
 
     @Schema(
         title = "The prompt(s) to generate completions for. By default, this prompt will be sent as a `user` role.",
@@ -149,12 +204,53 @@ public class ChatCompletion extends AbstractTask implements RunnableTask<ChatCom
                 messages.add(message);
             }
         }
+
         if (this.prompt != null) {
             messages.add(buildMessage("user", runContext.render(this.prompt)));
         }
 
+        List<ChatFunctionDynamic> chatFunctions = null;
+
+        if (this.functions != null) {
+            chatFunctions = new ArrayList<>();
+            for (PluginChatFunction function : functions) {
+                var chatParameters = new ChatFunctionParameters();
+
+                if(function.parameters != null) {
+                    for (PluginChatFunctionParameter parameter : function.parameters) {
+                        chatParameters.addProperty(ChatFunctionProperty.builder()
+                            .name(runContext.render(parameter.name))
+                            .description(runContext.render(parameter.description))
+                            .type(runContext.render(parameter.type))
+                            .required(parameter.required)
+                            .enumValues(parameter.enumValues == null ? null :
+                                new HashSet<>(runContext.render(parameter.enumValues)))
+                            .build()
+                        );
+                    }
+                }
+
+                ChatFunctionDynamic chatFunction = ChatFunctionDynamic.builder()
+                    .name(runContext.render(function.name))
+                    .description(runContext.render(function.description))
+                    .parameters(chatParameters).build();
+
+                chatFunctions.add(chatFunction);
+            }
+        }
+
+        ChatCompletionRequest.ChatCompletionRequestFunctionCall chatFunctionCall = null;
+
+        if (this.functionCall != null) {
+            chatFunctionCall = ChatCompletionRequest.ChatCompletionRequestFunctionCall.of(
+                this.functionCall
+            );
+        }
+
         ChatCompletionResult chatCompletionResult = client.createChatCompletion(ChatCompletionRequest.builder()
             .messages(messages)
+            .functions(chatFunctions)
+            .functionCall(chatFunctionCall)
             .model(model)
             .temperature(this.temperature)
             .topP(this.topP)
@@ -208,6 +304,67 @@ public class ChatCompletion extends AbstractTask implements RunnableTask<ChatCom
             title = "The API usage for this request."
         )
         private Usage usage;
+    }
+
+    @Builder
+    @Getter
+    public static class PluginChatFunctionParameter {
+        @Schema(
+            title = "The name of the function parameter."
+        )
+        @NotNull
+        @PluginProperty(dynamic = true)
+        private String name;
+
+        @Schema(
+            title = "A description of the function parameter.",
+            description = "Provide as many details as possible to ensure the model returns an accurate parameter."
+        )
+        @NotNull
+        @PluginProperty(dynamic = true)
+        private String description;
+
+        @Schema(
+            title = "The OpenAPI data type of the parameter.",
+            description = "Valid types are string, number, integer, boolean, array, object"
+        )
+        @NotNull
+        @PluginProperty(dynamic = true)
+        private String type;
+
+        @Schema(
+            title = "A list of values that the model *must* choose from when setting this parameter.",
+            description = "Optional, but useful when for classification problems."
+        )
+        @PluginProperty(dynamic = true)
+        private List<String> enumValues;
+
+        @Schema(
+            title = "Whether or not the model is required to provide this parameter.",
+            description = "Defaults to false."
+        )
+        private boolean required;
+    }
+
+    @Builder
+    @Getter
+    public static class PluginChatFunction {
+        @Schema(
+            title = "The name of the function."
+        )
+        @PluginProperty(dynamic = true)
+        private String name;
+
+        @Schema(
+            title = "A description of what the function does."
+        )
+        @PluginProperty(dynamic = true)
+        private String description;
+
+        @Schema(
+            title = "The function's parameters."
+        )
+        private List<PluginChatFunctionParameter> parameters;
     }
 
     private ChatMessage buildMessage(String role, String content) {
