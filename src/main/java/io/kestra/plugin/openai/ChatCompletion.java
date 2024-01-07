@@ -72,17 +72,16 @@ import java.util.Map;
                 "  - id: prioritize_response",
                 "    type: io.kestra.plugin.openai.ChatCompletion",
                 "    apiKey: \"yourOpenAIapiKey\"",
-                "    model: gpt-3.5-turbo",
+                "    model: gpt-4",
                 "    messages:",
                 "      - role: user",
                 "        content: \"{{inputs.prompt}}\"",
                 "    functions:",
                 "      - name: respond_to_review",
-                "        type: string",
-                "        description: Given the customer product review provided as input, determines how urgently a ",
-                "                     reply is required and then provides suggested response text.",
+                "        description: Given the customer product review provided as input, determines how urgently a reply is required and then provides suggested response text.",
                 "        parameters:",
                 "          - name: response_urgency",
+                "            type: string",
                 "            description: How urgently this customer review needs a reply. Bad reviews ",
                 "                         must be addressed immediately before anyone sees them. Good reviews can ",
                 "                         wait until later.",
@@ -91,13 +90,17 @@ import java.util.Map;
                 "              - reply_immediately",
                 "              - reply_later",
                 "          - name: response_text",
-                "            description: The text to post online in response to this review.",
                 "            type: string",
+                "            description: The text to post online in response to this review.",
                 "            required: true",
                 "",
-                "  - id: response",
+                "  - id: response_urgency",
                 "    type: io.kestra.core.tasks.debugs.Return",
-                "    format: \"{{outputs.completion.choices[0].message.function_call}}\""
+                "    format: \"{{outputs.prioritize_response.choices[0].message.function_call.arguments.response_urgency}}\""
+                "",
+                "  - id: response_text",
+                "    type: io.kestra.core.tasks.debugs.Return",
+                "    format: \"{{outputs.prioritize_response.choices[0].message.function_call.arguments.response_text}}\""
             }
         )
     }
