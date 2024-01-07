@@ -96,7 +96,7 @@ import java.util.Map;
                 "",
                 "  - id: response_urgency",
                 "    type: io.kestra.core.tasks.debugs.Return",
-                "    format: \"{{outputs.prioritize_response.choices[0].message.function_call.arguments.response_urgency}}\""
+                "    format: \"{{outputs.prioritize_response.choices[0].message.function_call.arguments.response_urgency}}\"",
                 "",
                 "  - id: response_text",
                 "    type: io.kestra.core.tasks.debugs.Return",
