@@ -25,13 +25,13 @@ import java.util.Map;
 @Getter
 @NoArgsConstructor
 @Schema(
-    title = "Given a prompt, get a response from an LLM using the [OpenAI’s Chat Completions API](https://platform.openai.com/docs/api-reference/chat/create)",
-    description = "For more information, refer to the [Chat Completions API docs](https://platform.openai.com/docs/guides/gpt/chat-completions-api)"
+    title = "Given a prompt, get a response from an LLM using the [OpenAI’s Chat Completions API](https://platform.openai.com/docs/api-reference/chat/create).",
+    description = "For more information, refer to the [Chat Completions API docs](https://platform.openai.com/docs/guides/gpt/chat-completions-api)."
 )
 @Plugin(
     examples = {
         @Example(
-            title = "Based on a prompt input, generate a completion response and pass it to a downstream task",
+            title = "Based on a prompt input, generate a completion response and pass it to a downstream task.",
             full = true,
             code = {
                 "id: openAI",

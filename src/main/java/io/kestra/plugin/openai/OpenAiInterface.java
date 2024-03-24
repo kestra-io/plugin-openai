@@ -7,7 +7,7 @@ import jakarta.validation.constraints.NotNull;
 
 public interface OpenAiInterface {
     @Schema(
-        title = "The OpenAI API key"
+        title = "The OpenAI API key."
     )
     @PluginProperty(dynamic = true)
     @NotNull

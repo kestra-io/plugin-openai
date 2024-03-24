@@ -31,15 +31,13 @@ import static io.kestra.core.utils.Rethrow.throwConsumer;
 @Getter
 @NoArgsConstructor
 @Schema(
-    title = "Given a prompt, create an image",
-    description = "For more information, refer to the [OpenAI Image Generation API docs](https://platform.openai.com/docs/api-reference/images/create)"
+    title = "Given a prompt, create an image.",
+    description = "For more information, refer to the [OpenAI Image Generation API docs](https://platform.openai.com/docs/api-reference/images/create)."
 )
 @Plugin(
     examples = {
         @Example(
             code = """
-                id: imageGeneration
-                type: io.kestra.plugin.openai.CreateImage
                 prompt: A funny cat in a black suit
                 apiKey: <your-api-key>
                 download: true
@@ -108,7 +106,7 @@ public class CreateImage extends AbstractTask implements RunnableTask<CreateImag
     public static class Output implements io.kestra.core.models.tasks.Output {
 
         @Schema(
-            title = "Generated images"
+            title = "Generated images."
         )
         private List<URI> images;
     }
