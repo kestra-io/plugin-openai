@@ -50,7 +50,7 @@ import java.util.Map;
                 "    prompt: \"{{inputs.prompt}}\"",
                 "",
                 "  - id: response",
-                "    type: io.kestra.core.tasks.debugs.Return",
+                "    type: io.kestra.plugin.core.debug.Return",
                 "    format: \"{{outputs.completion.choices[0].message.content}}\""
             }
         ),
@@ -95,11 +95,11 @@ import java.util.Map;
                 "            required: true",
                 "",
                 "  - id: response_urgency",
-                "    type: io.kestra.core.tasks.debugs.Return",
+                "    type: io.kestra.plugin.core.debug.Return",
                 "    format: \"{{outputs.prioritize_response.choices[0].message.function_call.arguments.response_urgency}}\"",
                 "",
                 "  - id: response_text",
-                "    type: io.kestra.core.tasks.debugs.Return",
+                "    type: io.kestra.plugin.core.debug.Return",
                 "    format: \"{{outputs.prioritize_response.choices[0].message.function_call.arguments.response_text}}\""
             }
         )
