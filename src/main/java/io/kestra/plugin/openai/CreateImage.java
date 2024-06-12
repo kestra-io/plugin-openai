@@ -92,7 +92,7 @@ public class CreateImage extends AbstractTask implements RunnableTask<CreateImag
         List<URI> files = new ArrayList<>();
         imageResult.getData().forEach(throwConsumer(image -> {
             if (download) {
-                files.add(runContext.putTempFile(this.downloadB64Json(image.getB64Json())));
+                files.add(runContext.storage().putFile(this.downloadB64Json(image.getB64Json())));
             } else {
                 files.add(URI.create(image.getUrl()));
             }
