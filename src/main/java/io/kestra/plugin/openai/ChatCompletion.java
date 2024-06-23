@@ -35,7 +35,7 @@ import java.util.Map;
             full = true,
             code = {
                 "id: openAI",
-                "namespace: dev",
+                "namespace: company.team",
                 "",
                 "inputs:",
                 "  - id: prompt",
@@ -61,7 +61,7 @@ import java.util.Map;
             full = true,
             code = {
                 "id: openAI",
-                "namespace: dev",
+                "namespace: company.team",
                 "",
                 "inputs:",
                 "  - id: prompt",
@@ -75,7 +75,7 @@ import java.util.Map;
                 "    model: gpt-4",
                 "    messages:",
                 "      - role: user",
-                "        content: \"{{inputs.prompt}}\"",
+                "        content: \"{{ inputs.prompt }}\"",
                 "    functions:",
                 "      - name: respond_to_review",
                 "        description: Given the customer product review provided as input, determines how urgently a reply is required and then provides suggested response text.",
@@ -96,11 +96,11 @@ import java.util.Map;
                 "",
                 "  - id: response_urgency",
                 "    type: io.kestra.plugin.core.debug.Return",
-                "    format: \"{{outputs.prioritize_response.choices[0].message.function_call.arguments.response_urgency}}\"",
+                "    format: \"{{ outputs.prioritize_response.choices[0].message.function_call.arguments.response_urgency }}\"",
                 "",
                 "  - id: response_text",
                 "    type: io.kestra.plugin.core.debug.Return",
-                "    format: \"{{outputs.prioritize_response.choices[0].message.function_call.arguments.response_text}}\""
+                "    format: \"{{ outputs.prioritize_response.choices[0].message.function_call.arguments.response_text }}\""
             }
         )
     }
