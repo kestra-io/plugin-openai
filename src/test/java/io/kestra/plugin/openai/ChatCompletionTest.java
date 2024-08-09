@@ -34,7 +34,7 @@ public class ChatCompletionTest {
 
         ChatCompletion task = ChatCompletion.builder()
             .apiKey(this.apiKey)
-            .model("gpt-3.5-turbo-0613")
+            .model("gpt-4o")
             .clientTimeout(30)
             .messages(messages)
             .build();
@@ -42,7 +42,7 @@ public class ChatCompletionTest {
         ChatCompletion.Output runOutput = task.run(runContext);
 
         assertThat(runOutput.getChoices().get(0).getMessage().getContent(), containsString("Paris"));
-        assertThat(runOutput.getModel(), containsString("gpt-3.5-turbo"));
+        assertThat(runOutput.getModel(), containsString("gpt-4o"));
         assertThat(runOutput.getUsage().getPromptTokens(), is(14L));
     }
 
@@ -52,14 +52,14 @@ public class ChatCompletionTest {
 
         ChatCompletion task = ChatCompletion.builder()
             .apiKey(this.apiKey)
-            .model("gpt-3.5-turbo")
+            .model("gpt-4o")
             .prompt("what is the capital of France?")
             .build();
 
         ChatCompletion.Output runOutput = task.run(runContext);
 
         assertThat(runOutput.getChoices().get(0).getMessage().getContent(), containsString("Paris"));
-        assertThat(runOutput.getModel(), containsString("gpt-3.5-turbo"));
+        assertThat(runOutput.getModel(), containsString("gpt-4o"));
         assertThat(runOutput.getUsage().getPromptTokens(), is(14L));
     }
 
@@ -74,7 +74,7 @@ public class ChatCompletionTest {
 
         ChatCompletion task = ChatCompletion.builder()
             .apiKey(this.apiKey)
-            .model("gpt-3.5-turbo-0613")
+            .model("gpt-4o")
             .messages(messages)
             .prompt("and the capital of germany?")
             .build();
@@ -82,7 +82,7 @@ public class ChatCompletionTest {
         ChatCompletion.Output runOutput = task.run(runContext);
 
         assertThat(runOutput.getChoices().get(0).getMessage().getContent(), containsString("Berlin"));
-        assertThat(runOutput.getModel(), containsString("gpt-3.5-turbo"));
+        assertThat(runOutput.getModel(), containsString("gpt-4o"));
         assertThat(runOutput.getUsage().getPromptTokens(), is(35L));
     }
 
@@ -120,7 +120,7 @@ public class ChatCompletionTest {
 
         ChatCompletion task = ChatCompletion.builder()
             .apiKey(this.apiKey)
-            .model("gpt-3.5-turbo")
+            .model("gpt-4o")
             .messages(messages)
             .functions(functions)
             .functionCall("auto")
@@ -131,7 +131,7 @@ public class ChatCompletionTest {
 
         assertThat(functionCall.getName(), containsString("test"));
         assertThat(functionCall.getArguments().get("location").toString(), containsString("Lyon"));
-        assertThat(runOutput.getModel(), containsString("gpt-3.5-turbo"));
+        assertThat(runOutput.getModel(), containsString("gpt-4o"));
     }
 
     @Test
@@ -174,7 +174,7 @@ public class ChatCompletionTest {
 
         ChatCompletion task = ChatCompletion.builder()
             .apiKey(this.apiKey)
-            .model("gpt-3.5-turbo")
+            .model("gpt-4o")
             .messages(messages)
             .functions(functions)
             .functionCall("record_customer_rating")
@@ -189,7 +189,7 @@ public class ChatCompletionTest {
             .get("food_eaten").toString()
             .toLowerCase(), containsString("steak"));
         assertThat(functionCall.getArguments().get("customer_name").toString(), containsString("John Smith"));
-        assertThat(runOutput.getModel(), containsString("gpt-3.5-turbo"));
+        assertThat(runOutput.getModel(), containsString("gpt-4o"));
     }
 
     private ChatMessage buildMessage(String role, String content) {
