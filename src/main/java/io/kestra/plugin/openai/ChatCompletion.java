@@ -33,75 +33,75 @@ import java.util.Map;
         @Example(
             title = "Based on a prompt input, generate a completion response and pass it to a downstream task.",
             full = true,
-            code = {
-                "id: openAI",
-                "namespace: company.team",
-                "",
-                "inputs:",
-                "  - id: prompt",
-                "    type: STRING",
-                "    defaults: What is data orchestration?",
-                "",
-                "tasks:",
-                "  - id: completion",
-                "    type: io.kestra.plugin.openai.ChatCompletion",
-                "    apiKey: \"yourOpenAIapiKey\"",
-                "    model: gpt-4o",
-                "    prompt: \"{{inputs.prompt}}\"",
-                "",
-                "  - id: response",
-                "    type: io.kestra.plugin.core.debug.Return",
-                "    format: \"{{outputs.completion.choices[0].message.content}}\""
-            }
+            code = """
+                id: openai
+                namespace: company.team
+                
+                inputs:
+                  - id: prompt
+                    type: STRING
+                    defaults: What is data orchestration?
+                
+                tasks:
+                  - id: completion
+                    type: io.kestra.plugin.openai.ChatCompletion
+                    apiKey: "yourOpenAIapiKey"
+                    model: gpt-4o
+                    prompt: "{{ inputs.prompt }}"
+                
+                  - id: response
+                    type: io.kestra.plugin.core.debug.Return
+                    format: {{ outputs.completion.choices[0].message.content }}" 
+                """
         ),
         @Example(
             title = "Based on a prompt input, ask OpenAI to call a function that determines whether you need to " +
                 "respond to a customer's review immediately or wait until later, and then comes up with a " +
                 "suggested response.",
             full = true,
-            code = {
-                "id: openAI",
-                "namespace: company.team",
-                "",
-                "inputs:",
-                "  - id: prompt",
-                "    type: STRING",
-                "    defaults: I love your product and would purchase it again!",
-                "",
-                "tasks:",
-                "  - id: prioritize_response",
-                "    type: io.kestra.plugin.openai.ChatCompletion",
-                "    apiKey: \"yourOpenAIapiKey\"",
-                "    model: gpt-4o",
-                "    messages:",
-                "      - role: user",
-                "        content: \"{{ inputs.prompt }}\"",
-                "    functions:",
-                "      - name: respond_to_review",
-                "        description: Given the customer product review provided as input, determines how urgently a reply is required and then provides suggested response text.",
-                "        parameters:",
-                "          - name: response_urgency",
-                "            type: string",
-                "            description: How urgently this customer review needs a reply. Bad reviews ",
-                "                         must be addressed immediately before anyone sees them. Good reviews can ",
-                "                         wait until later.",
-                "            required: true",
-                "            enumValues: ",
-                "              - reply_immediately",
-                "              - reply_later",
-                "          - name: response_text",
-                "            type: string",
-                "            description: The text to post online in response to this review.",
-                "            required: true",
-                "",
-                "  - id: response_urgency",
-                "    type: io.kestra.plugin.core.debug.Return",
-                "    format: \"{{ outputs.prioritize_response.choices[0].message.function_call.arguments.response_urgency }}\"",
-                "",
-                "  - id: response_text",
-                "    type: io.kestra.plugin.core.debug.Return",
-                "    format: \"{{ outputs.prioritize_response.choices[0].message.function_call.arguments.response_text }}\""
-            }
+            code = """
+                id: openai
+                namespace: company.team
+                
+                inputs:
+                  - id: prompt
+                    type: STRING
+                    defaults: I love your product and would purchase it again!
+                
+                tasks:
+                  - id: prioritize_response
+                    type: io.kestra.plugin.openai.ChatCompletion
+                    apiKey: "yourOpenAIapiKey"
+                    model: gpt-4o
+                    messages:
+                      - role: user
+                        content: "{{ inputs.prompt }}"
+                    functions:
+                      - name: respond_to_review
+                        description: Given the customer product review provided as input, determines how urgently a reply is required and then provides suggested response text.
+                        parameters:
+                          - name: response_urgency
+                            type: string
+                            description: How urgently this customer review needs a reply. Bad reviews 
+                                         must be addressed immediately before anyone sees them. Good reviews can 
+                                         wait until later.
+                            required: true
+                            enumValues:
+                              - reply_immediately
+                              - reply_later
+                          - name: response_text
+                            type: string
+                            description: The text to post online in response to this review.
+                            required: true
+                
+                  - id: response_urgency
+                    type: io.kestra.plugin.core.debug.Return
+                    format: "{{ outputs.prioritize_response.choices[0].message.function_call.arguments.response_urgency }}"
+                
+                  - id: response_text
+                    type: io.kestra.plugin.core.debug.Return
+                    format: "{{ outputs.prioritize_response.choices[0].message.function_call.arguments.response_text }}"
+                """
         )
     }
 )

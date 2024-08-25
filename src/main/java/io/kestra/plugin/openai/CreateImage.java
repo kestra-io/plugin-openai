@@ -37,11 +37,19 @@ import static io.kestra.core.utils.Rethrow.throwConsumer;
 @Plugin(
     examples = {
         @Example(
+            full = true,
             code = """
-                prompt: A funny cat in a black suit
-                apiKey: <your-api-key>
-                download: true
-                n: 5"""
+                id: openai
+                namespace: company.team
+
+                tasks:
+                  - id: create_image
+                    type: io.kestra.plugin.openai.CreateImage
+                    prompt: A funny cat in a black suit
+                    apiKey: <your-api-key>
+                    download: true
+                    n: 5
+                """
         )
     }
 )
