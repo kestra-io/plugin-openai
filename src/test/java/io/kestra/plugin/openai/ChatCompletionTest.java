@@ -2,6 +2,7 @@ package io.kestra.plugin.openai;
 
 import com.theokanning.openai.completion.chat.ChatFunctionCall;
 import com.theokanning.openai.completion.chat.ChatMessage;
+import io.kestra.core.models.property.Property;
 import io.kestra.core.runners.RunContext;
 import io.kestra.core.runners.RunContextFactory;
 import io.kestra.core.junit.annotations.KestraTest;
@@ -18,11 +19,11 @@ import static org.hamcrest.Matchers.is;
 
 @KestraTest
 @Disabled("Needs an OpenAI API Key to work")
-public class ChatCompletionTest {
+class ChatCompletionTest {
     @Inject
     private RunContextFactory runContextFactory;
 
-    private String apiKey = "";
+    private final String apiKey = "";
 
     @Test
     void runMessages() throws Exception {
@@ -33,15 +34,15 @@ public class ChatCompletionTest {
         );
 
         ChatCompletion task = ChatCompletion.builder()
-            .apiKey(this.apiKey)
-            .model("gpt-4o")
+            .apiKey(Property.of(this.apiKey))
+            .model(Property.of("gpt-4o"))
             .clientTimeout(30)
-            .messages(messages)
+            .messages(Property.of(messages))
             .build();
 
         ChatCompletion.Output runOutput = task.run(runContext);
 
-        assertThat(runOutput.getChoices().get(0).getMessage().getContent(), containsString("Paris"));
+        assertThat(runOutput.getChoices().getFirst().getMessage().getContent(), containsString("Paris"));
         assertThat(runOutput.getModel(), containsString("gpt-4o"));
         assertThat(runOutput.getUsage().getPromptTokens(), is(14L));
     }
@@ -51,14 +52,14 @@ public class ChatCompletionTest {
         RunContext runContext = runContextFactory.of();
 
         ChatCompletion task = ChatCompletion.builder()
-            .apiKey(this.apiKey)
-            .model("gpt-4o")
-            .prompt("what is the capital of France?")
+            .apiKey(Property.of(this.apiKey))
+            .model(Property.of("gpt-4o"))
+            .prompt(Property.of("what is the capital of France?"))
             .build();
 
         ChatCompletion.Output runOutput = task.run(runContext);
 
-        assertThat(runOutput.getChoices().get(0).getMessage().getContent(), containsString("Paris"));
+        assertThat(runOutput.getChoices().getFirst().getMessage().getContent(), containsString("Paris"));
         assertThat(runOutput.getModel(), containsString("gpt-4o"));
         assertThat(runOutput.getUsage().getPromptTokens(), is(14L));
     }
@@ -73,15 +74,15 @@ public class ChatCompletionTest {
         );
 
         ChatCompletion task = ChatCompletion.builder()
-            .apiKey(this.apiKey)
-            .model("gpt-4o")
-            .messages(messages)
-            .prompt("and the capital of germany?")
+            .apiKey(Property.of(this.apiKey))
+            .model(Property.of("gpt-4o"))
+            .messages(Property.of(messages))
+            .prompt(Property.of("and the capital of germany?"))
             .build();
 
         ChatCompletion.Output runOutput = task.run(runContext);
 
-        assertThat(runOutput.getChoices().get(0).getMessage().getContent(), containsString("Berlin"));
+        assertThat(runOutput.getChoices().getFirst().getMessage().getContent(), containsString("Berlin"));
         assertThat(runOutput.getModel(), containsString("gpt-4o"));
         assertThat(runOutput.getUsage().getPromptTokens(), is(35L));
     }
@@ -92,24 +93,24 @@ public class ChatCompletionTest {
 
         List<ChatCompletion.PluginChatFunctionParameter> parameters = List.of(
             ChatCompletion.PluginChatFunctionParameter.builder()
-                .name("location")
-                .type("string")
-                .description("The city and state/province, and country, e.g. San Francisco, CA, USA")
-                .required(true)
+                .name(Property.of("location"))
+                .type(Property.of("string"))
+                .description(Property.of("The city and state/province, and country, e.g. San Francisco, CA, USA"))
+                .required(Property.of(Boolean.TRUE))
                 .build(),
             ChatCompletion.PluginChatFunctionParameter.builder()
-                .name("unit")
-                .type("string")
-                .description("The temperature unit this city uses.")
-                .required(true)
+                .name(Property.of("unit"))
+                .type(Property.of("string"))
+                .description(Property.of("The temperature unit this city uses."))
+                .required(Property.of(Boolean.TRUE))
                 .build()
         );
 
         List<ChatCompletion.PluginChatFunction> functions = List.of(
             ChatCompletion.PluginChatFunction.builder()
-                .name("test")
-                .description("finds the most relevant city and its temperature unit")
-                .parameters(parameters)
+                .name(Property.of("test"))
+                .description(Property.of("finds the most relevant city and its temperature unit"))
+                .parameters(Property.of(parameters))
                 .build()
 
         );
@@ -119,15 +120,15 @@ public class ChatCompletionTest {
         );
 
         ChatCompletion task = ChatCompletion.builder()
-            .apiKey(this.apiKey)
-            .model("gpt-4o")
-            .messages(messages)
-            .functions(functions)
-            .functionCall("auto")
+            .apiKey(Property.of(this.apiKey))
+            .model(Property.of("gpt-4o"))
+            .messages(Property.of(messages))
+            .functions(Property.of(functions))
+            .functionCall(Property.of("auto"))
             .build();
 
         ChatCompletion.Output runOutput = task.run(runContext);
-        ChatFunctionCall functionCall = runOutput.getChoices().get(0).getMessage().getFunctionCall();
+        ChatFunctionCall functionCall = runOutput.getChoices().getFirst().getMessage().getFunctionCall();
 
         assertThat(functionCall.getName(), containsString("test"));
         assertThat(functionCall.getArguments().get("location").toString(), containsString("Lyon"));
@@ -140,31 +141,31 @@ public class ChatCompletionTest {
 
         List<ChatCompletion.PluginChatFunctionParameter> parameters = List.of(
             ChatCompletion.PluginChatFunctionParameter.builder()
-                .name("rating")
-                .type("string")
-                .description("A rating of what the customer thought of our restaurant based on the review they wrote.")
-                .required(true)
-                .enumValues(List.of("excellent", "acceptable", "terrible"))
+                .name(Property.of("rating"))
+                .type(Property.of("string"))
+                .description(Property.of("A rating of what the customer thought of our restaurant based on the review they wrote."))
+                .required(Property.of(Boolean.TRUE))
+                .enumValues(Property.of(List.of("excellent", "acceptable", "terrible")))
                 .build(),
             ChatCompletion.PluginChatFunctionParameter.builder()
-                .name("food_eaten")
-                .type("string")
-                .description("A list of the food the customer ate, or 'Unknown' if they did not specify.")
-                .required(true)
+                .name(Property.of("food_eaten"))
+                .type(Property.of("string"))
+                .description(Property.of("A list of the food the customer ate, or 'Unknown' if they did not specify."))
+                .required(Property.of(Boolean.TRUE))
                 .build(),
             ChatCompletion.PluginChatFunctionParameter.builder()
-                .name("customer_name")
-                .type("string")
-                .description("The customer's name.")
-                .required(true)
+                .name(Property.of("customer_name"))
+                .type(Property.of("string"))
+                .description(Property.of("The customer's name."))
+                .required(Property.of(Boolean.TRUE))
                 .build()
         );
 
         List<ChatCompletion.PluginChatFunction> functions = List.of(
             ChatCompletion.PluginChatFunction.builder()
-                .name("record_customer_rating")
-                .description("Saves a customer's rating of our restaurant based on what they wrote in an online review.")
-                .parameters(parameters)
+                .name(Property.of("record_customer_rating"))
+                .description(Property.of("Saves a customer's rating of our restaurant based on what they wrote in an online review."))
+                .parameters(Property.of(parameters))
                 .build()
         );
 
@@ -173,15 +174,15 @@ public class ChatCompletionTest {
         );
 
         ChatCompletion task = ChatCompletion.builder()
-            .apiKey(this.apiKey)
-            .model("gpt-4o")
-            .messages(messages)
-            .functions(functions)
-            .functionCall("record_customer_rating")
+            .apiKey(Property.of(this.apiKey))
+            .model(Property.of("gpt-4o"))
+            .messages(Property.of(messages))
+            .functions(Property.of(functions))
+            .functionCall(Property.of("record_customer_rating"))
             .build();
 
         ChatCompletion.Output runOutput = task.run(runContext);
-        ChatFunctionCall functionCall = runOutput.getChoices().get(0).getMessage().getFunctionCall();
+        ChatFunctionCall functionCall = runOutput.getChoices().getFirst().getMessage().getFunctionCall();
 
         assertThat(functionCall.getName(), containsString("record_customer_rating"));
         assertThat(functionCall.getArguments().get("rating").toString(), containsString("terrible"));
