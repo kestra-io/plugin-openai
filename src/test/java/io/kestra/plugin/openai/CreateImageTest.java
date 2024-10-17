@@ -1,5 +1,6 @@
 package io.kestra.plugin.openai;
 
+import io.kestra.core.models.property.Property;
 import io.kestra.core.runners.RunContext;
 import io.kestra.core.runners.RunContextFactory;
 import io.kestra.core.junit.annotations.KestraTest;
@@ -13,11 +14,11 @@ import static org.hamcrest.Matchers.*;
 
 @KestraTest
 @Disabled("Needs an OpenAI API Key to work")
-public class CreateImageTest {
+class CreateImageTest {
     @Inject
     private RunContextFactory runContextFactory;
 
-    private String apiKey = "";
+    private final String apiKey = "";
 
 
     @Test
@@ -25,9 +26,9 @@ public class CreateImageTest {
         RunContext runContext = runContextFactory.of();
 
         CreateImage task = CreateImage.builder()
-            .apiKey(this.apiKey)
-            .prompt("A funny cat in a black suit")
-            .size(CreateImage.SIZE.SMALL)
+            .apiKey(Property.of(this.apiKey))
+            .prompt(Property.of("A funny cat in a black suit"))
+            .size(Property.of(CreateImage.SIZE.SMALL))
             .build();
 
         CreateImage.Output runOutput = task.run(runContext);
@@ -40,10 +41,10 @@ public class CreateImageTest {
         RunContext runContext = runContextFactory.of();
 
         CreateImage task = CreateImage.builder()
-            .apiKey(this.apiKey)
-            .prompt("A funny cat in a black suit")
-            .size(CreateImage.SIZE.SMALL)
-            .download(true)
+            .apiKey(Property.of(this.apiKey))
+            .prompt(Property.of("A funny cat in a black suit"))
+            .size(Property.of(CreateImage.SIZE.SMALL))
+            .download(Property.of(Boolean.TRUE))
             .build();
 
         CreateImage.Output runOutput = task.run(runContext);
