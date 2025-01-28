@@ -36,22 +36,22 @@ import java.util.Map;
             code = """
                 id: openai
                 namespace: company.team
-                
+
                 inputs:
                   - id: prompt
                     type: STRING
                     defaults: What is data orchestration?
-                
+
                 tasks:
                   - id: completion
                     type: io.kestra.plugin.openai.ChatCompletion
                     apiKey: "yourOpenAIapiKey"
                     model: gpt-4o
                     prompt: "{{ inputs.prompt }}"
-                
+
                   - id: response
                     type: io.kestra.plugin.core.debug.Return
-                    format: {{ outputs.completion.choices[0].message.content }}" 
+                    format: {{ outputs.completion.choices[0].message.content }}"
                 """
         ),
         @Example(
@@ -62,12 +62,12 @@ import java.util.Map;
             code = """
                 id: openai
                 namespace: company.team
-                
+
                 inputs:
                   - id: prompt
                     type: STRING
                     defaults: I love your product and would purchase it again!
-                
+
                 tasks:
                   - id: prioritize_response
                     type: io.kestra.plugin.openai.ChatCompletion
@@ -82,8 +82,8 @@ import java.util.Map;
                         parameters:
                           - name: response_urgency
                             type: string
-                            description: How urgently this customer review needs a reply. Bad reviews 
-                                         must be addressed immediately before anyone sees them. Good reviews can 
+                            description: How urgently this customer review needs a reply. Bad reviews
+                                         must be addressed immediately before anyone sees them. Good reviews can
                                          wait until later.
                             required: true
                             enumValues:
@@ -93,11 +93,11 @@ import java.util.Map;
                             type: string
                             description: The text to post online in response to this review.
                             required: true
-                
+
                   - id: response_urgency
                     type: io.kestra.plugin.core.debug.Return
                     format: "{{ outputs.prioritize_response.choices[0].message.function_call.arguments.response_urgency }}"
-                
+
                   - id: response_text
                     type: io.kestra.plugin.core.debug.Return
                     format: "{{ outputs.prioritize_response.choices[0].message.function_call.arguments.response_text }}"
@@ -184,47 +184,47 @@ public class ChatCompletion extends AbstractTask implements RunnableTask<ChatCom
             throw new IllegalArgumentException("Either `messages` or `prompt` must be set");
         }
 
-        List<String> stop = this.stop != null ? this.stop.asList(runContext, String.class) : null;
-        String user = this.user == null ? null : this.user.as(runContext, String.class);
-        String model = this.model == null ? null : this.model.as(runContext, String.class);
+        List<String> stop = this.stop != null ? runContext.render(this.stop).asList(String.class) : null;
+        String user = this.user == null ? null : runContext.render(this.user).as(String.class).orElseThrow();
+        String model = this.model == null ? null : runContext.render(this.model).as(String.class).orElseThrow();
 
         List<ChatMessage> messages = new ArrayList<>();
         // Render all messages content
         if (this.messages != null) {
-            for (ChatMessage message : this.messages.asList(runContext, ChatMessage.class)) {
+            for (ChatMessage message : runContext.render(this.messages).asList(ChatMessage.class)) {
                 message.setContent(runContext.render(message.getContent()));
                 messages.add(message);
             }
         }
 
         if (this.prompt != null) {
-            messages.add(buildMessage("user", this.prompt.as(runContext, String.class)));
+            messages.add(buildMessage("user", runContext.render(this.prompt).as(String.class).orElseThrow()));
         }
 
         List<ChatFunctionDynamic> chatFunctions = null;
 
         if (this.functions != null) {
             chatFunctions = new ArrayList<>();
-            for (PluginChatFunction function : functions.asList(runContext, PluginChatFunction.class)) {
+            for (PluginChatFunction function : runContext.render(functions).asList(PluginChatFunction.class)) {
                 var chatParameters = new ChatFunctionParameters();
 
                 if(function.parameters != null) {
-                    for (PluginChatFunctionParameter parameter : function.parameters.asList(runContext, PluginChatFunctionParameter.class)) {
+                    for (PluginChatFunctionParameter parameter : runContext.render(function.parameters).asList(PluginChatFunctionParameter.class)) {
                         chatParameters.addProperty(ChatFunctionProperty.builder()
-                            .name(parameter.name.as(runContext, String.class))
-                            .description(parameter.description.as(runContext, String.class))
-                            .type(parameter.type.as(runContext, String.class))
-                            .required(parameter.required == null ? null : parameter.required.as(runContext, Boolean.class))
+                            .name(runContext.render(parameter.name).as(String.class).orElseThrow())
+                            .description(runContext.render(parameter.description).as(String.class).orElseThrow())
+                            .type(runContext.render(parameter.type).as(String.class).orElseThrow())
+                            .required(parameter.required == null ? null : runContext.render(parameter.required).as(Boolean.class).orElseThrow())
                             .enumValues(parameter.enumValues == null ? null :
-                                new HashSet<>(parameter.enumValues.asList(runContext, String.class)))
+                                new HashSet<>(runContext.render(parameter.enumValues).asList(String.class)))
                             .build()
                         );
                     }
                 }
 
                 ChatFunctionDynamic chatFunction = ChatFunctionDynamic.builder()
-                    .name(function.name == null ? null : function.name.as(runContext, String.class))
-                    .description(function.description == null ? null : function.description.as(runContext, String.class))
+                    .name(function.name == null ? null : runContext.render(function.name).as(String.class).orElseThrow())
+                    .description(function.description == null ? null : runContext.render(function.description).as(String.class).orElseThrow())
                     .parameters(chatParameters).build();
 
                 chatFunctions.add(chatFunction);
@@ -235,7 +235,7 @@ public class ChatCompletion extends AbstractTask implements RunnableTask<ChatCom
 
         if (this.functionCall != null) {
             chatFunctionCall = ChatCompletionRequest.ChatCompletionRequestFunctionCall.of(
-                this.functionCall.as(runContext, String.class)
+                runContext.render(this.functionCall).as(String.class).orElseThrow()
             );
         }
 
@@ -244,14 +244,14 @@ public class ChatCompletion extends AbstractTask implements RunnableTask<ChatCom
             .functions(chatFunctions)
             .functionCall(chatFunctionCall)
             .model(model)
-            .temperature(this.temperature == null ? null : this.temperature.as(runContext, Double.class))
-            .topP(this.topP == null ? null : this.topP.as(runContext, Double.class))
-            .n(this.n == null ? null : this.n.as(runContext, Integer.class))
+            .temperature(this.temperature == null ? null : runContext.render(this.temperature).as(Double.class).orElseThrow())
+            .topP(this.topP == null ? null : runContext.render(this.topP).as(Double.class).orElseThrow())
+            .n(this.n == null ? null : runContext.render(this.n).as(Integer.class).orElseThrow())
             .stop(stop)
-            .maxTokens(this.maxTokens == null ? null : this.maxTokens.as(runContext, Integer.class))
-            .presencePenalty(this.presencePenalty == null ? null : this.presencePenalty.as(runContext, Double.class))
-            .frequencyPenalty(this.frequencyPenalty == null ? null : this.frequencyPenalty.as(runContext, Double.class))
-            .logitBias(this.logitBias == null ? null : this.logitBias.asMap(runContext, String.class, Integer.class))
+            .maxTokens(this.maxTokens == null ? null : runContext.render(this.maxTokens).as(Integer.class).orElseThrow())
+            .presencePenalty(this.presencePenalty == null ? null : runContext.render(this.presencePenalty).as(Double.class).orElseThrow())
+            .frequencyPenalty(this.frequencyPenalty == null ? null : runContext.render(this.frequencyPenalty).as(Double.class).orElseThrow())
+            .logitBias(this.logitBias == null ? null : runContext.render(this.logitBias).asMap(String.class, Integer.class))
             .user(user)
             .build()
         );

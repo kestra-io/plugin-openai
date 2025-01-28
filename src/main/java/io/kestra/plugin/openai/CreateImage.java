@@ -69,6 +69,7 @@ public class CreateImage extends AbstractTask implements RunnableTask<CreateImag
         title = "The size of the generated images."
     )
     @Builder.Default
+    @NotNull
     private Property<SIZE> size = Property.of(SIZE.LARGE);
 
     @Schema(
@@ -76,27 +77,28 @@ public class CreateImage extends AbstractTask implements RunnableTask<CreateImag
         description = "If enable, the generated image will be downloaded inside Kestra's internal storage. Else, the URL of the generated image will be available as task output."
     )
     @Builder.Default
+    @NotNull
     private Property<Boolean> download = Property.of(Boolean.FALSE);
 
     @Override
     public CreateImage.Output run(RunContext runContext) throws Exception {
         OpenAiService client = this.client(runContext);
 
-        String user = runContext.render(this.user == null ? null : this.user.as(runContext, String.class));
-        String prompt = runContext.render(this.prompt == null ? null : this.prompt.as(runContext, String.class));
+        String user = runContext.render(this.user == null ? null : runContext.render(this.user).as(String.class).orElseThrow());
+        String prompt = runContext.render(this.prompt).as(String.class).orElseThrow();
 
         ImageResult imageResult = client.createImage(CreateImageRequest.builder()
             .prompt(prompt)
-            .size(this.size.as(runContext, SIZE.class).getSize())
+            .size(runContext.render(this.size).as(SIZE.class).orElseThrow().getSize())
             .n(this.n)
-            .responseFormat(this.download.as(runContext, Boolean.class) ? "b64_json" : "url")
+            .responseFormat(runContext.render(this.download).as(Boolean.class).orElseThrow() ? "b64_json" : "url")
             .user(user)
             .build()
         );
 
         List<URI> files = new ArrayList<>();
         imageResult.getData().forEach(throwConsumer(image -> {
-            if (this.download.as(runContext, Boolean.class)) {
+            if (runContext.render(this.download).as(Boolean.class).orElseThrow()) {
                 files.add(runContext.storage().putFile(this.downloadB64Json(image.getB64Json())));
             } else {
                 files.add(URI.create(image.getUrl()));
