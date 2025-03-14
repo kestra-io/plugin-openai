@@ -31,8 +31,8 @@ import java.util.Map;
 @Plugin(
     examples = {
         @Example(
-            title = "Based on a prompt input, generate a completion response and pass it to a downstream task.",
             full = true,
+            title = "Based on a prompt input, generate a completion response and pass it to a downstream task.",
             code = """
                 id: openai
                 namespace: company.team
@@ -55,10 +55,29 @@ import java.util.Map;
                 """
         ),
         @Example(
+            full = true,
+            title = "Send a prompt to OpenAI's ChatCompletion API",
+            code = """
+                id: openai
+                namespace: company.team
+                
+                tasks:
+                  - id: prompt
+                    type: io.kestra.plugin.openai.ChatCompletion
+                    apiKey: "{{ secret('OPENAI_API_KEY') }}"
+                    model: gpt-4
+                    prompt: Explain in one sentence why data engineers build data pipelines
+                
+                  - id: use_output
+                    type: io.kestra.plugin.core.log.Log
+                    message: "{{ outputs.prompt.choices | jq('.[].message.content') | first }}"
+            """
+        ),
+        @Example(
+            full = true,
             title = "Based on a prompt input, ask OpenAI to call a function that determines whether you need to " +
                 "respond to a customer's review immediately or wait until later, and then comes up with a " +
                 "suggested response.",
-            full = true,
             code = """
                 id: openai
                 namespace: company.team
