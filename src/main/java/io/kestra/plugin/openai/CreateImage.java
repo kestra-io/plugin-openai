@@ -31,7 +31,7 @@ import static io.kestra.core.utils.Rethrow.throwConsumer;
 @Getter
 @NoArgsConstructor
 @Schema(
-    title = "Given a prompt, create an image.",
+    title = "Given a prompt, create an image with OpenAI.",
     description = "For more information, refer to the [OpenAI Image Generation API docs](https://platform.openai.com/docs/api-reference/images/create)."
 )
 @Plugin(
