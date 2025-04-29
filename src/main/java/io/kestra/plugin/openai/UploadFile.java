@@ -83,7 +83,7 @@ public class UploadFile extends AbstractTask implements RunnableTask<UploadFile.
 
     @Schema(
         title = "The source file URI",
-        description = "URI of the file containing data to be loaded into InfluxDB"
+        description = "URI of the file containing data to be loaded into OpenAI"
     )
     @NotNull
     @PluginProperty(internalStorageURI = true)
