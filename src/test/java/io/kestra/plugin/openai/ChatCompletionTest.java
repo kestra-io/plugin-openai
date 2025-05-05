@@ -9,6 +9,7 @@ import io.kestra.core.junit.annotations.KestraTest;
 import jakarta.inject.Inject;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.DisabledIf;
 
 import java.util.List;
 
@@ -18,12 +19,13 @@ import static org.hamcrest.Matchers.is;
 
 
 @KestraTest
-@Disabled("Needs an OpenAI API Key to work")
-class ChatCompletionTest {
+@DisabledIf(
+    value = "canNotBeEnabled",
+    disabledReason = "Needs an OpenAI API Key to work"
+)
+class ChatCompletionTest extends AbstractOpenAITest {
     @Inject
     private RunContextFactory runContextFactory;
-
-    private final String apiKey = "";
 
     @Test
     void runMessages() throws Exception {
@@ -34,7 +36,7 @@ class ChatCompletionTest {
         );
 
         ChatCompletion task = ChatCompletion.builder()
-            .apiKey(Property.of(this.apiKey))
+            .apiKey(Property.of(getApiKey()))
             .model(Property.of("gpt-4o"))
             .clientTimeout(30)
             .messages(Property.of(messages))
@@ -52,7 +54,7 @@ class ChatCompletionTest {
         RunContext runContext = runContextFactory.of();
 
         ChatCompletion task = ChatCompletion.builder()
-            .apiKey(Property.of(this.apiKey))
+            .apiKey(Property.of(getApiKey()))
             .model(Property.of("gpt-4o"))
             .prompt(Property.of("what is the capital of France?"))
             .build();
@@ -74,7 +76,7 @@ class ChatCompletionTest {
         );
 
         ChatCompletion task = ChatCompletion.builder()
-            .apiKey(Property.of(this.apiKey))
+            .apiKey(Property.of(getApiKey()))
             .model(Property.of("gpt-4o"))
             .messages(Property.of(messages))
             .prompt(Property.of("and the capital of germany?"))
@@ -120,7 +122,7 @@ class ChatCompletionTest {
         );
 
         ChatCompletion task = ChatCompletion.builder()
-            .apiKey(Property.of(this.apiKey))
+            .apiKey(Property.of(getApiKey()))
             .model(Property.of("gpt-4o"))
             .messages(Property.of(messages))
             .functions(Property.of(functions))
@@ -174,7 +176,7 @@ class ChatCompletionTest {
         );
 
         ChatCompletion task = ChatCompletion.builder()
-            .apiKey(Property.of(this.apiKey))
+            .apiKey(Property.of(getApiKey()))
             .model(Property.of("gpt-4o"))
             .messages(Property.of(messages))
             .functions(Property.of(functions))
