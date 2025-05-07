@@ -55,13 +55,13 @@ import static io.kestra.core.utils.Rethrow.throwConsumer;
 )
 public class CreateImage extends AbstractTask implements RunnableTask<CreateImage.Output> {
     @Schema(
-        title = "Message to send to the API as prompt."
+        title = "Message to send to the API as prompt"
     )
     @NotNull
     private Property<String> prompt;
 
     @Schema(
-        title = "The number of images to generate. Must be between 1 and 10."
+        title = "The number of images to generate; must be between 1 and 10."
     )
     private Integer n;
 
@@ -113,7 +113,7 @@ public class CreateImage extends AbstractTask implements RunnableTask<CreateImag
     public static class Output implements io.kestra.core.models.tasks.Output {
 
         @Schema(
-            title = "Generated images."
+            title = "Generated images"
         )
         private List<URI> images;
     }
