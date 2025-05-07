@@ -7,18 +7,18 @@ import jakarta.validation.constraints.NotNull;
 
 public interface OpenAiInterface {
     @Schema(
-        title = "The OpenAI API key."
+        title = "The OpenAI API key"
     )
     @NotNull
     Property<String> getApiKey();
 
     @Schema(
-        title = "A unique identifier representing your end-user."
+        title = "A unique identifier representing your end-user"
     )
     Property<String> getUser();
 
     @Schema(
-        title = "The maximum number of seconds to wait for a response."
+        title = "The maximum number of seconds to wait for a response"
     )
     long getClientTimeout();
 }
