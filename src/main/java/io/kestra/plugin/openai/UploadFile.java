@@ -90,7 +90,7 @@ public class UploadFile extends AbstractTask implements RunnableTask<UploadFile.
     private Property<String> from;
 
     @Schema(
-        title = "The intended purpose of the uploaded file."
+        title = "The intended purpose of the uploaded file"
     )
     @NotNull
     private Property<String> purpose;
@@ -120,7 +120,7 @@ public class UploadFile extends AbstractTask implements RunnableTask<UploadFile.
     @Getter
     public static class Output implements io.kestra.core.models.tasks.Output {
         @Schema(
-            title = "The ID of the uploaded file."
+            title = "The ID of the uploaded file"
         )
         private String fileId;
     }

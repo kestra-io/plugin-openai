@@ -56,7 +56,7 @@ import java.util.Map;
         ),
         @Example(
             full = true,
-            title = "Send a prompt to OpenAI's ChatCompletion API",
+            title = "Send a prompt to OpenAI's ChatCompletion API.",
             code = """
                 id: openai
                 namespace: company.team
@@ -126,8 +126,8 @@ import java.util.Map;
 )
 public class ChatCompletion extends AbstractTask implements RunnableTask<ChatCompletion.Output> {
     @Schema(
-        title = "A list of messages comprising the conversation so far.",
-        description = "Required if prompt is not set."
+        title = "A list of messages comprising the conversation so far",
+        description = "This property is required if prompt is not set."
     )
     private Property<List<ChatMessage>> messages;
 
@@ -292,7 +292,7 @@ public class ChatCompletion extends AbstractTask implements RunnableTask<ChatCom
     @Getter
     public static class Output implements io.kestra.core.models.tasks.Output {
         @Schema(
-            title = "Unique ID assigned to this Chat Completion."
+            title = "Unique ID assigned to this Chat Completion"
         )
         private String id;
 
@@ -302,17 +302,17 @@ public class ChatCompletion extends AbstractTask implements RunnableTask<ChatCom
         private String object;
 
         @Schema(
-            title="The GPT model used."
+            title="The GPT model used"
         )
         private String model;
 
         @Schema(
-            title = "A list of all generated completions."
+            title = "A list of all generated completions"
         )
         private List<ChatCompletionChoice> choices;
 
         @Schema(
-            title = "The API usage for this request."
+            title = "The API usage for this request"
         )
         private Usage usage;
     }
@@ -321,20 +321,20 @@ public class ChatCompletion extends AbstractTask implements RunnableTask<ChatCom
     @Getter
     public static class PluginChatFunctionParameter {
         @Schema(
-            title = "The name of the function parameter."
+            title = "The name of the function parameter"
         )
         @NotNull
         private Property<String> name;
 
         @Schema(
-            title = "A description of the function parameter.",
+            title = "A description of the function parameter",
             description = "Provide as many details as possible to ensure the model returns an accurate parameter."
         )
         @NotNull
         private Property<String> description;
 
         @Schema(
-            title = "The OpenAPI data type of the parameter.",
+            title = "The OpenAPI data type of the parameter",
             description = "Valid types are string, number, integer, boolean, array, object"
         )
         @NotNull
@@ -347,7 +347,7 @@ public class ChatCompletion extends AbstractTask implements RunnableTask<ChatCom
         private Property<List<String>> enumValues;
 
         @Schema(
-            title = "Whether or not the model is required to provide this parameter.",
+            title = "Whether or not the model is required to provide this parameter",
             description = "Defaults to false."
         )
         private Property<Boolean> required;
@@ -357,17 +357,17 @@ public class ChatCompletion extends AbstractTask implements RunnableTask<ChatCom
     @Getter
     public static class PluginChatFunction {
         @Schema(
-            title = "The name of the function."
+            title = "The name of the function"
         )
         private Property<String> name;
 
         @Schema(
-            title = "A description of what the function does."
+            title = "A description of what the function does"
         )
         private Property<String> description;
 
         @Schema(
-            title = "The function's parameters."
+            title = "The function's parameters"
         )
         private Property<List<PluginChatFunctionParameter>> parameters;
     }
