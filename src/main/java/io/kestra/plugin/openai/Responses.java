@@ -1,27 +1,24 @@
 package io.kestra.plugin.openai;
 
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.openai.client.OpenAIClient;
-import com.openai.models.Reasoning;
 import com.openai.models.responses.*;
-import io.kestra.core.exceptions.IllegalVariableEvaluationException;
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
+import io.kestra.core.models.annotations.PluginProperty;
+import io.kestra.core.models.executions.metrics.Counter;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
 import io.kestra.plugin.openai.utils.ParametersUtils;
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.NotNull;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 
-import jakarta.validation.constraints.NotNull;
-import org.slf4j.Logger;
-
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.stream.Collectors;
 
 @SuperBuilder
 @ToString
@@ -36,7 +33,7 @@ import java.util.stream.Collectors;
     examples = {
         @Example(
             full = true,
-            title = "Simple text input and output without tools",
+            title = "Simple text input and output.",
             code = """
                 id: responses_text
                 namespace: company.team
@@ -100,15 +97,20 @@ public class Responses extends AbstractTask implements RunnableTask<Responses.Ou
     private Property<String> model;
 
     @Schema(
-        title = "List of input messages",
-        description = "Can be a list of strings or a variable that binds to a JSON array of strings."
+        title = "Input for the model"
     )
     @NotNull
-    private Object input;
+    private Property<Object> input;
+
+    @Schema(
+        title = "Text response configuration",
+        description = "Configure the format of the model's text response"
+    )
+    private Property<Map<String, Object>> text;
 
     @Schema(
         title = "List of built-in tools to enable",
-        description = "e.g., web_search, file_search, computer_use"
+        description = "e.g., web_search, file_search, function calling"
     )
     private Property<List<Tool>> tools;
 
@@ -116,13 +118,13 @@ public class Responses extends AbstractTask implements RunnableTask<Responses.Ou
         title = "Controls which tool is called by the model",
         description = "none: no tools, auto: model picks, required: must use tools"
     )
-    private Property<String> toolChoice = Property.of("none");
+    private Property<String> toolChoice;
 
     @Schema(
         title = "Whether to persist response and chat history",
         description = "If true (default), persists in OpenAI's storage"
     )
-    private Property<Boolean> store = Property.of(Boolean.TRUE);
+    private Property<Boolean> store;
 
     @Schema(
         title = "ID of previous response to continue conversation"
@@ -133,7 +135,7 @@ public class Responses extends AbstractTask implements RunnableTask<Responses.Ou
         title = "Reasoning configuration",
         description = "Configuration for model reasoning process"
     )
-    private Property<Reasoning> reasoning;
+    private Property<Map<String, String>> reasoning;
 
     @Schema(
         title = "Maximum tokens in the response"
@@ -157,62 +159,117 @@ public class Responses extends AbstractTask implements RunnableTask<Responses.Ou
 
     @Override
     public Output run(RunContext runContext) throws Exception {
-        Logger logger = runContext.logger();
-
         OpenAIClient client = this.openAIClient(runContext);
 
         String modelName = runContext.render(this.model).as(String.class).orElseThrow();
-        String renderedToolChoice = runContext.render(this.toolChoice).as(String.class).orElseThrow();
-        String previousResponseId = runContext.render(this.previousResponseId).as(String.class).orElse(null);
-        Boolean renderedStore = runContext.render(store).as(Boolean.class).orElseThrow();
+        String renderedToolChoice = runContext.render(this.toolChoice).as(String.class).orElse("none");
+        Boolean renderedStore = runContext.render(store).as(Boolean.class).orElse(Boolean.TRUE);
+        String renderedPreviousResponseId = runContext.render(this.previousResponseId).as(String.class).orElse(null);
+        Integer maxTokens = runContext.render(this.maxOutputTokens).as(Integer.class).orElse(null);
+        Double tempValue = runContext.render(this.temperature).as(Double.class).orElse(null);
+        Double topPValue = runContext.render(this.topP).as(Double.class).orElse(null);
+        Boolean parallelCalls = runContext.render(this.parallelToolCalls).as(Boolean.class).orElse(null);
 
-        ResponseInputItem.Message renderedInput = ParametersUtils.listParameters(runContext,input);
+        Map<String, String> renderedReasoningMap = runContext.render(reasoning).asMap(String.class, String.class);
+        Map<String, Object> renderedTextFormat = runContext.render(text).asMap(String.class, Object.class);
 
-        ToolChoiceOptions toolChoiceOptions = ToolChoiceOptions.of(renderedToolChoice);
+        List<ResponseInputItem.Message> renderedInput = ParametersUtils.listParameters(runContext, input);
 
-        Reasoning renderedReasoning = runContext.render(reasoning).as(Reasoning.class).orElseThrow();
+        List<Tool> renderedTools = runContext.render(tools).asList(Tool.class);
 
-        List<Tool> tool = runContext.render(tools).asList(Tool.class);
+        List<ResponseInputItem> responseInputItem = renderedInput.stream().map(ResponseInputItem::ofMessage).toList();
 
-        ResponseInputItem responseInputItem = ResponseInputItem.ofMessage(renderedInput);
+        ResponseCreateParams.Input modelInput = ResponseCreateParams.Input.ofResponse(responseInputItem);
 
-        ResponseCreateParams.Input modelInput = ResponseCreateParams.Input.ofResponse(List.of(responseInputItem));
-
-        ResponseCreateParams createParams = ResponseCreateParams.builder()
+        ResponseCreateParams.Builder paramsBuilder = ResponseCreateParams.builder()
             .input(modelInput)
-            .previousResponseId(previousResponseId)
-            .tools(tool)
-            .toolChoice(toolChoiceOptions)
-            .reasoning(renderedReasoning)
-            .store(renderedStore)
             .model(modelName)
-            .build();
+            .store(renderedStore);
 
-        Response outputResponse = client.responses().create(createParams);
+        if (renderedTools != null && !renderedTools.isEmpty()) {
+            paramsBuilder.tools(renderedTools);
+        }
 
+        paramsBuilder.toolChoice(ToolChoiceOptions.of(renderedToolChoice));
+
+        if (renderedPreviousResponseId != null && !renderedPreviousResponseId.isEmpty()) {
+            paramsBuilder.previousResponseId(renderedPreviousResponseId);
+        }
+
+        if (renderedReasoningMap != null) {
+            com.openai.models.Reasoning renderedReasoning = ParametersUtils.OBJECT_MAPPER.convertValue(renderedReasoningMap,
+                com.openai.models.Reasoning.class);
+            paramsBuilder.reasoning(renderedReasoning);
+        }
+
+        if (maxTokens != null) {
+            paramsBuilder.maxOutputTokens(maxTokens);
+        }
+
+        if (tempValue != null) {
+            paramsBuilder.temperature(tempValue);
+        }
+
+        if (topPValue != null) {
+            paramsBuilder.topP(topPValue);
+        }
+
+        if (parallelCalls != null) {
+            paramsBuilder.parallelToolCalls(parallelCalls);
+        }
+
+        if (renderedTextFormat != null) {
+            ResponseTextConfig textFormat = ParametersUtils.OBJECT_MAPPER.convertValue(renderedTextFormat, ResponseTextConfig.class);
+            paramsBuilder.text(textFormat);
+        }
+
+        ResponseCreateParams params = paramsBuilder.build();
+
+        runContext.logger().info("Sending request to OpenAI: {}", params);
+
+        Response outputResponse = client.responses().create(params);
+
+        if (outputResponse.usage().isPresent()) {
+            runContext.metric(Counter.of("usage.prompt_tokens", outputResponse.usage().get().inputTokens()));
+            runContext.metric(Counter.of("usage.completion_tokens", outputResponse.usage().get().outputTokens()));
+            runContext.metric(Counter.of("usage.total_tokens", outputResponse.usage().get().totalTokens()));
+        }
 
         List<String> sources = outputResponse.output().stream()
-            .flatMap(item -> item.asMessage().content().stream())
-            .findFirst()
-            .map(content -> content.asOutputText().annotations())
-            .orElse(Collections.emptyList())
-            .stream()
-            .map(ResponseOutputText.Annotation::asUrlCitation)
-            .map(ResponseOutputText.Annotation.UrlCitation::url)
-            .toList();
-
-        String outputText = outputResponse.output().stream()
             .flatMap(item -> item.message().stream())
             .flatMap(message -> message.content().stream())
             .flatMap(content -> content.outputText().stream())
-            .map(ResponseOutputText::text)
-            .collect(Collectors.joining("\n"));
+            .flatMap(outputText -> outputText.annotations().stream())
+            .map(ResponseOutputText.Annotation::asUrlCitation)
+            .filter(Objects::nonNull)
+            .map(ResponseOutputText.Annotation.UrlCitation::url)
+            .toList();
+
+        String outputText = ParametersUtils.extractOutputText(outputResponse.output());
 
         return Output.builder()
             .responseId(outputResponse.id())
             .outputText(outputText)
             .sources(sources)
-            .rawResponse(outputResponse).build();
+            .rawResponse(outputResponse)
+            .build();
+    }
+
+    @Getter
+    @SuperBuilder
+    @NoArgsConstructor
+    @JsonDeserialize
+    public static class Reasoning {
+        @Schema(
+                title = "The name of the function"
+        )
+        private Property<String> effort;
+
+        @Schema(
+                title = "The function's parameters"
+        )
+        private Property<String> summary;
+
     }
 
     @Builder
