@@ -15,24 +15,28 @@ import java.net.URLConnection;
 import java.util.*;
 import java.util.stream.Collectors;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import static io.kestra.core.utils.Rethrow.throwFunction;
 
 public final class ParametersUtils {
+    private static final Logger logger = LoggerFactory.getLogger(ParametersUtils.class);
     public static final ObjectMapper OBJECT_MAPPER = JacksonMapper.ofJson();
+    private static final String BASE64_PREFIX = "data:";
 
     private ParametersUtils() {
-        // prevent instantiation
+        // Prevent instantiation of utility class
     }
 
     public static List<ResponseInputItem.Message> listParameters(RunContext runContext, Property<Object> parameters) throws Exception {
-
         Object rendered = runContext.render(parameters).as(Object.class).orElseThrow();
-
         String renderedString = (String) rendered;
-
         String trimmedString = renderedString.trim();
+
         if (trimmedString.startsWith("[") && trimmedString.endsWith("]")) {
-            List<Map<String, Object>> rawList = OBJECT_MAPPER.readValue(renderedString, new TypeReference<>() {});
+            List<Map<String, Object>> rawList = OBJECT_MAPPER.readValue(renderedString, new TypeReference<>() {
+            });
             return convertToMessages(runContext, rawList);
         }
 
@@ -48,94 +52,100 @@ public final class ParametersUtils {
 
     private static List<ResponseInputItem.Message> convertToMessages(RunContext runContext, List<Map<String, Object>> renderedList) throws Exception {
         List<ResponseInputItem.Message> messages = OBJECT_MAPPER.convertValue(
-            renderedList, new TypeReference<>() {}
+            renderedList, new TypeReference<>() {
+            }
         );
 
         return messages.stream()
-            .map(throwFunction(message -> {
-                return ResponseInputItem.Message.builder()
+            .map(throwFunction(message ->
+                ResponseInputItem.Message.builder()
                     .role(message.role())
                     .content(
                         message.content().stream()
                             .map(throwFunction(content -> {
                                 if (content.inputImage().isPresent()) {
-                                    ResponseInputImage image = content.asInputImage();
-
-                                    // Check if we have a URL
-                                    if (image.imageUrl().isPresent()) {
-                                        String renderedUrl = runContext.render(image.imageUrl().get());
-
-                                        String processedUrl;
-                                        if (renderedUrl.startsWith("kestra:///")) {
-                                            processedUrl = convertKestraUrlToBase64(runContext, renderedUrl);
-                                        } else {
-                                            processedUrl = renderedUrl;
-                                        }
-
-                                        return ResponseInputContent.ofInputImage(
-                                            ResponseInputImage.builder()
-                                                .imageUrl(processedUrl)
-                                                .detail(ResponseInputImage.Detail.AUTO)
-                                                .build()
-                                        );
-                                    } else {
-                                        // Check for file ID
-                                        if (image.fileId().isPresent()) {
-                                            runContext.logger().debug("Input image file ID: {}", image.fileId().get());
-                                            return ResponseInputContent.ofInputImage(
-                                                ResponseInputImage.builder()
-                                                    .fileId(image.fileId().get())
-                                                    .detail(ResponseInputImage.Detail.AUTO) // Always set a non-null value
-                                                    .build()
-                                            );
-                                        } else {
-                                            runContext.logger().warn("Image without URL or fileId, skipping");
-                                            return content; // Return original content as fallback
-                                        }
-                                    }
-                                } else if (content.inputFile().isPresent()) {
-                                    ResponseInputFile file = content.asInputFile();
-
-                                    // Check for file ID first (preferred)
-                                    if (file.fileId().isPresent()) {
-                                        return ResponseInputContent.ofInputFile(
-                                            ResponseInputFile.builder()
-                                                .fileId(file.fileId().get())
-                                                .build()
-                                        );
-                                    }
-                                    // Fall back to file data and filename if available
-                                    else if (file.fileData().isPresent() && file.filename().isPresent()) {
-                                        return ResponseInputContent.ofInputFile(
-                                            ResponseInputFile.builder()
-                                                .fileData(file.fileData().get())
-                                                .filename(file.filename().get())
-                                                .build()
-                                        );
-                                    } else {
-                                        runContext.logger().warn("File without fileId or fileData+filename, skipping");
-                                        return content; // Return original content as fallback
-                                    }
+                                    return processImageContent(runContext, content);
                                 } else if (content.inputText().isPresent()) {
-                                    ResponseInputText text = content.asInputText();
-                                    return ResponseInputContent.ofInputText(
-                                        ResponseInputText.builder()
-                                            .text(text.text())
-                                            .build()
-                                    );
+                                    return processTextContent(content);
+                                } else if (content.inputFile().isPresent()) {
+                                    return processFileContent(content);
                                 } else {
                                     return content;
                                 }
                             }))
                             .collect(Collectors.toList())
                     )
-                    .build();
-            }))
+                    .build()
+            ))
             .collect(Collectors.toList());
     }
 
+
+    private static ResponseInputContent processFileContent(ResponseInputContent content) {
+        ResponseInputFile file = content.asInputFile();
+        ResponseInputFile.Builder builder = ResponseInputFile.builder();
+
+        file.fileId().ifPresent(builder::fileId);
+        file.fileData().ifPresent(builder::fileData);
+        file.filename().ifPresent(builder::filename);
+
+        return ResponseInputContent.ofInputFile(builder.build());
+    }
+
     /**
-     * Converts a Kestra storage URL to a base64 data URI
+     * Processes image content, converting Kestra URLs to base64 if necessary.
+     *
+     * @param runContext The current run context
+     * @param content The input content to process
+     * @return Processed image content
+     * @throws IOException if there's an error reading the image
+     */
+    private static ResponseInputContent processImageContent(RunContext runContext, ResponseInputContent content) throws IOException, IllegalVariableEvaluationException {
+        ResponseInputImage image = content.asInputImage();
+
+        if (image.imageUrl().isPresent()) {
+            String renderedUrl = runContext.render(image.imageUrl().get());
+
+            String processedUrl;
+            if (renderedUrl.startsWith("kestra:///")) {
+                processedUrl = convertKestraUrlToBase64(runContext, renderedUrl);
+            } else {
+                processedUrl = renderedUrl;
+            }
+
+            ResponseInputImage.Detail detail;
+            try {
+                detail = image.detail() != null ? image.detail() : ResponseInputImage.Detail.AUTO;
+            } catch (Exception e) {
+                logger.debug("Error getting image detail, defaulting to AUTO: {}", e.getMessage());
+                detail = ResponseInputImage.Detail.AUTO;
+            }
+
+            return ResponseInputContent.ofInputImage(
+                ResponseInputImage.builder()
+                    .imageUrl(processedUrl)
+                    .detail(detail)
+                    .build());
+        }
+        return content;
+    }
+
+    private static ResponseInputContent processTextContent(ResponseInputContent content) {
+        ResponseInputText text = content.asInputText();
+        return ResponseInputContent.ofInputText(
+            ResponseInputText.builder()
+                .text(text.text())
+                .build()
+        );
+    }
+
+    /**
+     * Converts a Kestra storage URL to a base64 data URI.
+     *
+     * @param runContext The current run context
+     * @param kestraUrl The Kestra storage URL to convert
+     * @return Base64 encoded data URI
+     * @throws IOException if there's an error reading the file
      */
     private static String convertKestraUrlToBase64(RunContext runContext, String kestraUrl) throws IOException {
         try (InputStream in = runContext.storage().getFile(URI.create(kestraUrl))) {
@@ -144,20 +154,17 @@ public final class ParametersUtils {
 
             String filename = kestraUrl.substring(kestraUrl.lastIndexOf('/') + 1);
             String mimeType = URLConnection.guessContentTypeFromName(filename);
-            if (mimeType == null) {
-                if (filename.toLowerCase().endsWith(".jpg") || filename.toLowerCase().endsWith(".jpeg")) {
-                    mimeType = "image/jpeg";
-                } else if (filename.toLowerCase().endsWith(".png")) {
-                    mimeType = "image/png";
-                } else {
-                    mimeType = "application/octet-stream";
-                }
-            }
 
-            return "data:" + mimeType + ";base64," + encoded;
+            return BASE64_PREFIX + mimeType + ";base64," + encoded;
         }
     }
 
+    /**
+     * Extracts output text from a list of ResponseOutputItem.
+     *
+     * @param items List of output items
+     * @return Extracted text from the output items
+     */
     public static String extractOutputText(List<ResponseOutputItem> items) {
         return items.stream()
             .map(ParametersUtils::extractFromItem)
@@ -165,6 +172,12 @@ public final class ParametersUtils {
             .collect(Collectors.joining("\n"));
     }
 
+    /**
+     * Extracts text from a single ResponseOutputItem.
+     *
+     * @param item The output item to extract text from
+     * @return Extracted text or null
+     */
     private static String extractFromItem(ResponseOutputItem item) {
         if (item == null) return null;
 

@@ -225,8 +225,6 @@ public class Responses extends AbstractTask implements RunnableTask<Responses.Ou
 
         ResponseCreateParams params = paramsBuilder.build();
 
-        runContext.logger().info("Sending request to OpenAI: {}", params);
-
         Response outputResponse = client.responses().create(params);
 
         if (outputResponse.usage().isPresent()) {
