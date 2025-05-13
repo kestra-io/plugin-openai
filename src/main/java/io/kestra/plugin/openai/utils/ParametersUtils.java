@@ -2,6 +2,7 @@ package io.kestra.plugin.openai.utils;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.openai.core.JsonValue;
 import com.openai.models.responses.*;
 import io.kestra.core.exceptions.IllegalVariableEvaluationException;
 import io.kestra.core.models.property.Property;
@@ -80,7 +81,6 @@ public final class ParametersUtils {
             .collect(Collectors.toList());
     }
 
-
     private static ResponseInputContent processFileContent(ResponseInputContent content) {
         ResponseInputFile file = content.asInputFile();
         ResponseInputFile.Builder builder = ResponseInputFile.builder();
@@ -108,10 +108,11 @@ public final class ParametersUtils {
 
             String processedUrl;
             if (renderedUrl.startsWith("kestra:///")) {
-                processedUrl = convertKestraUrlToBase64(runContext, renderedUrl);
-            } else {
-                processedUrl = renderedUrl;
-            }
+                if (image._additionalProperties().isEmpty() || image._additionalProperties().get("mimeType").isMissing())
+                   throw new IllegalArgumentException("You must provide 'mimeType' as an additional parameter, when using a file from 'input: FILE'");
+                }
+
+            processedUrl = convertKestraUrlToBase64(runContext, renderedUrl,image._additionalProperties().get("mimeType"));
 
             ResponseInputImage.Detail detail;
             try {
@@ -147,15 +148,15 @@ public final class ParametersUtils {
      * @return Base64 encoded data URI
      * @throws IOException if there's an error reading the file
      */
-    private static String convertKestraUrlToBase64(RunContext runContext, String kestraUrl) throws IOException {
+    private static String convertKestraUrlToBase64(RunContext runContext, String kestraUrl, JsonValue mimeType) throws IOException {
         try (InputStream in = runContext.storage().getFile(URI.create(kestraUrl))) {
             byte[] bytes = in.readAllBytes();
             String encoded = Base64.getEncoder().encodeToString(bytes);
 
             String filename = kestraUrl.substring(kestraUrl.lastIndexOf('/') + 1);
-            String mimeType = URLConnection.guessContentTypeFromName(filename);
+            String renderedMimeType = mimeType.isNull() ? URLConnection.guessContentTypeFromName(filename) : mimeType.toString();
 
-            return BASE64_PREFIX + mimeType + ";base64," + encoded;
+            return BASE64_PREFIX + renderedMimeType + ";base64," + encoded;
         }
     }
 

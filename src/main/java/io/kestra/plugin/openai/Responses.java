@@ -10,13 +10,16 @@ import io.kestra.core.models.executions.metrics.Counter;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
+import io.kestra.core.serializers.JacksonMapper;
 import io.kestra.plugin.openai.utils.ParametersUtils;
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 
@@ -118,13 +121,15 @@ public class Responses extends AbstractTask implements RunnableTask<Responses.Ou
         title = "Controls which tool is called by the model",
         description = "none: no tools, auto: model picks, required: must use tools"
     )
-    private Property<String> toolChoice;
+    private Property<ToolChoice> toolChoice;
 
     @Schema(
         title = "Whether to persist response and chat history",
         description = "If true (default), persists in OpenAI's storage"
     )
-    private Property<Boolean> store;
+    @NotNull
+    @Builder.Default
+    private Property<Boolean> store = Property.of(true);
 
     @Schema(
         title = "ID of previous response to continue conversation"
@@ -145,12 +150,14 @@ public class Responses extends AbstractTask implements RunnableTask<Responses.Ou
     @Schema(
         title = "Sampling temperature (0-2)"
     )
-    private Property<Double> temperature;
+    @Builder.Default
+    private Property<@Max(2)Double> temperature = Property.of(1.0);
 
     @Schema(
         title = "Nucleus sampling parameter (0-1)"
     )
-    private Property<Double> topP;
+    @Builder.Default
+    private Property<@Max(1) Double> topP = Property.of(1.0);
 
     @Schema(
         title = "Allow parallel tool execution"
@@ -162,12 +169,12 @@ public class Responses extends AbstractTask implements RunnableTask<Responses.Ou
         OpenAIClient client = this.openAIClient(runContext);
 
         String modelName = runContext.render(this.model).as(String.class).orElseThrow();
-        String renderedToolChoice = runContext.render(this.toolChoice).as(String.class).orElse("none");
+        ToolChoice renderedToolChoice = runContext.render(this.toolChoice).as(ToolChoice.class).orElse(ToolChoice.AUTO);
         Boolean renderedStore = runContext.render(store).as(Boolean.class).orElse(Boolean.TRUE);
         String renderedPreviousResponseId = runContext.render(this.previousResponseId).as(String.class).orElse(null);
         Integer maxTokens = runContext.render(this.maxOutputTokens).as(Integer.class).orElse(null);
-        Double tempValue = runContext.render(this.temperature).as(Double.class).orElse(null);
-        Double topPValue = runContext.render(this.topP).as(Double.class).orElse(null);
+        Double renderedTemperature = runContext.render(this.temperature).as(Double.class).orElse(1.0);
+        Double renderedTopP = runContext.render(this.topP).as(Double.class).orElse(1.0);
         Boolean parallelCalls = runContext.render(this.parallelToolCalls).as(Boolean.class).orElse(null);
 
         Map<String, String> renderedReasoningMap = runContext.render(reasoning).asMap(String.class, String.class);
@@ -184,13 +191,15 @@ public class Responses extends AbstractTask implements RunnableTask<Responses.Ou
         ResponseCreateParams.Builder paramsBuilder = ResponseCreateParams.builder()
             .input(modelInput)
             .model(modelName)
-            .store(renderedStore);
+            .store(renderedStore)
+            .temperature(renderedTemperature)
+            .topP(renderedTopP);
 
         if (renderedTools != null && !renderedTools.isEmpty()) {
             paramsBuilder.tools(renderedTools);
         }
 
-        paramsBuilder.toolChoice(ToolChoiceOptions.of(renderedToolChoice));
+        paramsBuilder.toolChoice(ToolChoiceOptions.of(renderedToolChoice.name().toLowerCase(Locale.ROOT)));
 
         if (renderedPreviousResponseId != null && !renderedPreviousResponseId.isEmpty()) {
             paramsBuilder.previousResponseId(renderedPreviousResponseId);
@@ -204,14 +213,6 @@ public class Responses extends AbstractTask implements RunnableTask<Responses.Ou
 
         if (maxTokens != null) {
             paramsBuilder.maxOutputTokens(maxTokens);
-        }
-
-        if (tempValue != null) {
-            paramsBuilder.temperature(tempValue);
-        }
-
-        if (topPValue != null) {
-            paramsBuilder.topP(topPValue);
         }
 
         if (parallelCalls != null) {
@@ -228,9 +229,9 @@ public class Responses extends AbstractTask implements RunnableTask<Responses.Ou
         Response outputResponse = client.responses().create(params);
 
         if (outputResponse.usage().isPresent()) {
-            runContext.metric(Counter.of("usage.prompt_tokens", outputResponse.usage().get().inputTokens()));
-            runContext.metric(Counter.of("usage.completion_tokens", outputResponse.usage().get().outputTokens()));
-            runContext.metric(Counter.of("usage.total_tokens", outputResponse.usage().get().totalTokens()));
+            runContext.metric(Counter.of("usage.prompt.tokens", outputResponse.usage().get().inputTokens()));
+            runContext.metric(Counter.of("usage.completion.tokens", outputResponse.usage().get().outputTokens()));
+            runContext.metric(Counter.of("usage.total.tokens", outputResponse.usage().get().totalTokens()));
         }
 
         List<String> sources = outputResponse.output().stream()
@@ -249,25 +250,14 @@ public class Responses extends AbstractTask implements RunnableTask<Responses.Ou
             .responseId(outputResponse.id())
             .outputText(outputText)
             .sources(sources)
-            .rawResponse(outputResponse)
+            .rawResponse(JacksonMapper.toMap(outputResponse))
             .build();
     }
 
-    @Getter
-    @SuperBuilder
-    @NoArgsConstructor
-    @JsonDeserialize
-    public static class Reasoning {
-        @Schema(
-                title = "The name of the function"
-        )
-        private Property<String> effort;
-
-        @Schema(
-                title = "The function's parameters"
-        )
-        private Property<String> summary;
-
+    public enum ToolChoice {
+        NONE,
+        AUTO,
+        REQUIRED
     }
 
     @Builder
@@ -291,6 +281,6 @@ public class Responses extends AbstractTask implements RunnableTask<Responses.Ou
         @Schema(
             title = "Full API response for advanced use"
         )
-        private Object rawResponse;
+        private Map<String, Object> rawResponse;
     }
 }

@@ -69,7 +69,7 @@ public class ResponsesTest extends AbstractOpenAITest {
             .model(io.kestra.core.models.property.Property.of("gpt-4.1"))
             .input(Property.of("What is the latest version of Kestra?"))
             .tools(io.kestra.core.models.property.Property.of(Collections.singletonList(webSearchTool)))
-            .toolChoice(io.kestra.core.models.property.Property.of("required"))
+            .toolChoice(io.kestra.core.models.property.Property.of(Responses.ToolChoice.REQUIRED))
             .build();
 
         Responses.Output output = task.run(runContext);
@@ -114,7 +114,7 @@ public class ResponsesTest extends AbstractOpenAITest {
             .model(io.kestra.core.models.property.Property.of("gpt-4.1"))
             .input(Property.of("I'm so happy about this new feature!"))
             .tools(io.kestra.core.models.property.Property.of(Collections.singletonList(functionTool)))
-            .toolChoice(io.kestra.core.models.property.Property.of("required"))
+            .toolChoice(io.kestra.core.models.property.Property.of(Responses.ToolChoice.REQUIRED))
             .build();
 
         Responses.Output output = task.run(runContext);
