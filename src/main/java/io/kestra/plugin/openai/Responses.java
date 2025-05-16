@@ -56,7 +56,7 @@ import java.util.Objects;
                   - id: log
                     type: io.kestra.plugin.core.log.Log
                     message: "{{ outputs.explain.outputText }}"
-            """
+                """
         ),
         @Example(
             full = true,
@@ -86,7 +86,7 @@ import java.util.Objects;
                   - id: log
                     type: io.kestra.plugin.core.log.Log
                     message: "{{ outputs.trends.outputText }}"
-            """
+                """
         )
     }
 )
