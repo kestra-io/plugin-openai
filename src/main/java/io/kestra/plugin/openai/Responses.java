@@ -146,7 +146,7 @@ import java.util.Objects;
                 tasks:
                   - id: openai
                     type: io.kestra.plugin.openai.Responses
-                    apiKey: "{{ kv('OPENAI_API_KEY') }}"
+                    apiKey: "{{ secret('OPENAI_API_KEY') }}"
                     model: gpt-4.1-mini
                     input: "{{ inputs.prompt }}"
                     toolChoice: AUTO
@@ -208,7 +208,7 @@ import java.util.Objects;
 
                   - id: chat_request
                     type: io.kestra.plugin.openai.Responses
-                    apiKey: "{{ kv('OPENAI_API_KEY') }}"
+                    apiKey: "{{ secret('OPENAI_API_KEY') }}"
                     model: gpt-4.1
                     previousResponseId: "{{ kv('RESPONSE_ID', errorOnMissing=false) }}"
                     input:
@@ -242,7 +242,7 @@ import java.util.Objects;
                 tasks:
                   - id: generate_structured_response
                     type: io.kestra.plugin.openai.Responses
-                    apiKey: "{{ kv('OPENAI_API_KEY') }}"
+                    apiKey: "{{ secret('OPENAI_API_KEY') }}"
                     model: gpt-4.1-mini
                     input: "Fill in nutrients information for the following food: {{ inputs.food }}"
                     text:
