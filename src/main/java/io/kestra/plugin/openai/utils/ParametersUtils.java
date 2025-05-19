@@ -16,6 +16,8 @@ import java.net.URLConnection;
 import java.util.*;
 import java.util.stream.Collectors;
 
+import io.kestra.core.utils.FileUtils;
+import lombok.Getter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -107,12 +109,8 @@ public final class ParametersUtils {
             String renderedUrl = runContext.render(image.imageUrl().get());
 
             String processedUrl;
-            if (renderedUrl.startsWith("kestra:///")) {
-                if (image._additionalProperties().isEmpty() || image._additionalProperties().get("mimeType").isMissing())
-                   throw new IllegalArgumentException("You must provide 'mimeType' as an additional parameter, when using a file from 'input: FILE'");
-                }
-
-            processedUrl = convertKestraUrlToBase64(runContext, renderedUrl,image._additionalProperties().get("mimeType"));
+            String filename = FileUtils.getFileName(URI.create(renderedUrl));
+            String mimeType;
 
             ResponseInputImage.Detail detail;
             try {
@@ -121,6 +119,29 @@ public final class ParametersUtils {
                 logger.debug("Error getting image detail, defaulting to AUTO: {}", e.getMessage());
                 detail = ResponseInputImage.Detail.AUTO;
             }
+
+            if (!renderedUrl.startsWith("kestra:///")) {
+                return ResponseInputContent.ofInputImage(
+                    ResponseInputImage.builder()
+                        .imageUrl(renderedUrl)
+                        .detail(detail)
+                        .build());
+            }
+
+            if (!image._additionalProperties().isEmpty() && !image._additionalProperties().get("mimeType").isMissing()) {
+                mimeType = runContext.render(image._additionalProperties().get("mimeType").toString());
+            } else {
+                mimeType = URLConnection.guessContentTypeFromName(filename);
+            }
+
+            if (mimeType == null || !SupportedMimeType.isSupported(mimeType)) {
+                throw new IllegalArgumentException(
+                    "Unsupported or unknown MIME type '" + mimeType + "' for file '" + filename + "'. " +
+                        "You must provide a valid 'mimeType' as an additional property along with your `image_url` if using internal files like .upl or .tmp." +
+                        "For more details on supported mime types, see: https://platform.openai.com/docs/guides/images-vision#image-input-requirements.");
+            }
+
+            processedUrl = convertKestraUrlToBase64(runContext, renderedUrl,mimeType);
 
             return ResponseInputContent.ofInputImage(
                 ResponseInputImage.builder()
@@ -148,13 +169,10 @@ public final class ParametersUtils {
      * @return Base64 encoded data URI
      * @throws IOException if there's an error reading the file
      */
-    private static String convertKestraUrlToBase64(RunContext runContext, String kestraUrl, JsonValue mimeType) throws IOException {
+    private static String convertKestraUrlToBase64(RunContext runContext, String kestraUrl, String renderedMimeType) throws IOException {
         try (InputStream in = runContext.storage().getFile(URI.create(kestraUrl))) {
             byte[] bytes = in.readAllBytes();
             String encoded = Base64.getEncoder().encodeToString(bytes);
-
-            String filename = kestraUrl.substring(kestraUrl.lastIndexOf('/') + 1);
-            String renderedMimeType = mimeType.isNull() ? URLConnection.guessContentTypeFromName(filename) : mimeType.toString();
 
             return BASE64_PREFIX + renderedMimeType + ";base64," + encoded;
         }
@@ -191,5 +209,23 @@ public final class ParametersUtils {
             .flatMap(content -> content.outputText().stream())
             .map(ResponseOutputText::text)
             .collect(Collectors.joining("\n"));
+    }
+
+    @Getter
+    public enum SupportedMimeType {
+        PNG("image/png"),
+        JPEG("image/jpeg"),
+        WEBP("image/webp"),
+        GIF("image/gif"),
+        JPG("image/jpg");
+        private final String mime;
+
+        SupportedMimeType(String mime) {
+            this.mime = mime;
+        }
+
+        public static boolean isSupported(String mimeType) {
+            return Arrays.stream(values()).anyMatch(m -> m.mime.equalsIgnoreCase(mimeType));
+        }
     }
 }
