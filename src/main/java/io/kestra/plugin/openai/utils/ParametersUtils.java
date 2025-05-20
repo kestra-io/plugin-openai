@@ -138,7 +138,7 @@ public final class ParametersUtils {
                 throw new IllegalArgumentException(
                     "Unsupported or unknown MIME type '" + mimeType + "' for file '" + filename + "'. " +
                         "You must provide a valid 'mimeType' as an additional property along with your `image_url` if using internal files like .upl or .tmp." +
-                        "For more details on supported mime types, see: https://platform.openai.com/docs/guides/images-vision#image-input-requirements.");
+                        "For more details on supported mime types, see: [OpenAI's Image Input Requirements](https://platform.openai.com/docs/guides/images-vision#image-input-requirements.)");
             }
 
             processedUrl = convertKestraUrlToBase64(runContext, renderedUrl,mimeType);
