@@ -71,7 +71,7 @@ import java.util.Map;
                   - id: use_output
                     type: io.kestra.plugin.core.log.Log
                     message: "{{ outputs.prompt.choices | jq('.[].message.content') | first }}"
-            """
+                """
         ),
         @Example(
             full = true,
