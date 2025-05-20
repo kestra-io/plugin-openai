@@ -5,6 +5,7 @@ import io.kestra.core.runners.RunContext;
 import io.kestra.core.runners.RunContextFactory;
 import io.kestra.core.junit.annotations.KestraTest;
 import io.kestra.core.storages.StorageInterface;
+import io.kestra.core.tenant.TenantService;
 import io.kestra.core.utils.IdUtils;
 import jakarta.inject.Inject;
 import org.junit.jupiter.api.Test;
@@ -52,7 +53,7 @@ class UploadFileTest extends AbstractOpenAITest {
 
     protected URI storagePut(String path) throws URISyntaxException, IOException {
         return storageInterface.put(
-            null,
+            TenantService.MAIN_TENANT,
             null,
             new URI("/" + (path != null ? path : IdUtils.create())),
             new FileInputStream(file())
