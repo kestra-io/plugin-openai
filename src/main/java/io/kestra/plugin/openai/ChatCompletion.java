@@ -34,7 +34,7 @@ import java.util.Map;
             full = true,
             title = "Based on a prompt input, generate a completion response and pass it to a downstream task.",
             code = """
-                id: openai
+                id: openai_chat
                 namespace: company.team
 
                 inputs:
@@ -45,27 +45,27 @@ import java.util.Map;
                 tasks:
                   - id: completion
                     type: io.kestra.plugin.openai.ChatCompletion
-                    apiKey: "yourOpenAIapiKey"
+                    apiKey: "{{ secret('OPENAI_API_KEY') }}"
                     model: gpt-4o
                     prompt: "{{ inputs.prompt }}"
 
-                  - id: response
-                    type: io.kestra.plugin.core.debug.Return
-                    format: {{ outputs.completion.choices[0].message.content }}"
+                  - id: log_output
+                    type: io.kestra.plugin.core.log.Log
+                    message: "{{ outputs.completion.choices[0].message.content }}"
                 """
         ),
         @Example(
             full = true,
             title = "Send a prompt to OpenAI's ChatCompletion API.",
             code = """
-                id: openai
+                id: openai_chat
                 namespace: company.team
                 
                 tasks:
                   - id: prompt
                     type: io.kestra.plugin.openai.ChatCompletion
                     apiKey: "{{ secret('OPENAI_API_KEY') }}"
-                    model: gpt-4
+                    model: gpt-4o
                     prompt: Explain in one sentence why data engineers build data pipelines
                 
                   - id: use_output
@@ -79,7 +79,7 @@ import java.util.Map;
                 "respond to a customer's review immediately or wait until later, and then comes up with a " +
                 "suggested response.",
             code = """
-                id: openai
+                id: openai_chat
                 namespace: company.team
 
                 inputs:
