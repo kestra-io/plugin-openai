@@ -41,9 +41,9 @@ class UploadFileTest extends AbstractOpenAITest {
         RunContext runContext = runContextFactory.of();
 
         UploadFile task = UploadFile.builder()
-            .apiKey(Property.of(getApiKey()))
-            .from(Property.of(source.toString()))
-            .purpose(Property.of("user_data"))
+            .apiKey(Property.ofValue(getApiKey()))
+            .from(Property.ofValue(source.toString()))
+            .purpose(Property.ofValue("user_data"))
             .build();
 
         UploadFile.Output runOutput = task.run(runContext);

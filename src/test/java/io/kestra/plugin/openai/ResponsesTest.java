@@ -37,10 +37,10 @@ public class ResponsesTest extends AbstractOpenAITest {
         Responses task = Responses.builder()
             .id("test-task")
             .type(Responses.class.getName())
-            .apiKey(Property.of(getApiKey()))
+            .apiKey(Property.ofValue(getApiKey()))
             .clientTimeout(30)
-            .model(Property.of("gpt-4.1"))
-            .input(Property.of("Explain what Kestra is in one sentence."))
+            .model(Property.ofValue("gpt-4.1"))
+            .input(Property.ofValue("Explain what Kestra is in one sentence."))
             .build();
 
 
@@ -64,12 +64,12 @@ public class ResponsesTest extends AbstractOpenAITest {
         Responses task = Responses.builder()
             .id("test-web-search")
             .type(Responses.class.getName())
-            .apiKey(Property.of(getApiKey()))
+            .apiKey(Property.ofValue(getApiKey()))
             .clientTimeout(30)
-            .model(io.kestra.core.models.property.Property.of("gpt-4.1"))
-            .input(Property.of("What is the latest version of Kestra?"))
-            .tools(io.kestra.core.models.property.Property.of(Collections.singletonList(webSearchTool)))
-            .toolChoice(io.kestra.core.models.property.Property.of(Responses.ToolChoice.REQUIRED))
+            .model(io.kestra.core.models.property.Property.ofValue("gpt-4.1"))
+            .input(Property.ofValue("What is the latest version of Kestra?"))
+            .tools(io.kestra.core.models.property.Property.ofValue(Collections.singletonList(webSearchTool)))
+            .toolChoice(io.kestra.core.models.property.Property.ofValue(Responses.ToolChoice.REQUIRED))
             .build();
 
         Responses.Output output = task.run(runContext);
@@ -110,11 +110,11 @@ public class ResponsesTest extends AbstractOpenAITest {
         Responses task = Responses.builder()
             .id("test-function")
             .type(Responses.class.getName())
-            .apiKey(Property.of(getApiKey()))
-            .model(io.kestra.core.models.property.Property.of("gpt-4.1"))
-            .input(Property.of("I'm so happy about this new feature!"))
-            .tools(io.kestra.core.models.property.Property.of(Collections.singletonList(functionTool)))
-            .toolChoice(io.kestra.core.models.property.Property.of(Responses.ToolChoice.REQUIRED))
+            .apiKey(Property.ofValue(getApiKey()))
+            .model(io.kestra.core.models.property.Property.ofValue("gpt-4.1"))
+            .input(Property.ofValue("I'm so happy about this new feature!"))
+            .tools(io.kestra.core.models.property.Property.ofValue(Collections.singletonList(functionTool)))
+            .toolChoice(io.kestra.core.models.property.Property.ofValue(Responses.ToolChoice.REQUIRED))
             .build();
 
         Responses.Output output = task.run(runContext);
