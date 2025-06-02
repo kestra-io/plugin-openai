@@ -36,10 +36,10 @@ class ChatCompletionTest extends AbstractOpenAITest {
         );
 
         ChatCompletion task = ChatCompletion.builder()
-            .apiKey(Property.of(getApiKey()))
-            .model(Property.of("gpt-4o"))
+            .apiKey(Property.ofValue(getApiKey()))
+            .model(Property.ofValue("gpt-4o"))
             .clientTimeout(30)
-            .messages(Property.of(messages))
+            .messages(Property.ofValue(messages))
             .build();
 
         ChatCompletion.Output runOutput = task.run(runContext);
@@ -54,9 +54,9 @@ class ChatCompletionTest extends AbstractOpenAITest {
         RunContext runContext = runContextFactory.of();
 
         ChatCompletion task = ChatCompletion.builder()
-            .apiKey(Property.of(getApiKey()))
-            .model(Property.of("gpt-4o"))
-            .prompt(Property.of("what is the capital of France?"))
+            .apiKey(Property.ofValue(getApiKey()))
+            .model(Property.ofValue("gpt-4o"))
+            .prompt(Property.ofValue("what is the capital of France?"))
             .build();
 
         ChatCompletion.Output runOutput = task.run(runContext);
@@ -76,10 +76,10 @@ class ChatCompletionTest extends AbstractOpenAITest {
         );
 
         ChatCompletion task = ChatCompletion.builder()
-            .apiKey(Property.of(getApiKey()))
-            .model(Property.of("gpt-4o"))
-            .messages(Property.of(messages))
-            .prompt(Property.of("and the capital of germany?"))
+            .apiKey(Property.ofValue(getApiKey()))
+            .model(Property.ofValue("gpt-4o"))
+            .messages(Property.ofValue(messages))
+            .prompt(Property.ofValue("and the capital of germany?"))
             .build();
 
         ChatCompletion.Output runOutput = task.run(runContext);
@@ -95,24 +95,24 @@ class ChatCompletionTest extends AbstractOpenAITest {
 
         List<ChatCompletion.PluginChatFunctionParameter> parameters = List.of(
             ChatCompletion.PluginChatFunctionParameter.builder()
-                .name(Property.of("location"))
-                .type(Property.of("string"))
-                .description(Property.of("The city and state/province, and country, e.g. San Francisco, CA, USA"))
-                .required(Property.of(Boolean.TRUE))
+                .name(Property.ofValue("location"))
+                .type(Property.ofValue("string"))
+                .description(Property.ofValue("The city and state/province, and country, e.g. San Francisco, CA, USA"))
+                .required(Property.ofValue(Boolean.TRUE))
                 .build(),
             ChatCompletion.PluginChatFunctionParameter.builder()
-                .name(Property.of("unit"))
-                .type(Property.of("string"))
-                .description(Property.of("The temperature unit this city uses."))
-                .required(Property.of(Boolean.TRUE))
+                .name(Property.ofValue("unit"))
+                .type(Property.ofValue("string"))
+                .description(Property.ofValue("The temperature unit this city uses."))
+                .required(Property.ofValue(Boolean.TRUE))
                 .build()
         );
 
         List<ChatCompletion.PluginChatFunction> functions = List.of(
             ChatCompletion.PluginChatFunction.builder()
-                .name(Property.of("test"))
-                .description(Property.of("finds the most relevant city and its temperature unit"))
-                .parameters(Property.of(parameters))
+                .name(Property.ofValue("test"))
+                .description(Property.ofValue("finds the most relevant city and its temperature unit"))
+                .parameters(Property.ofValue(parameters))
                 .build()
 
         );
@@ -122,11 +122,11 @@ class ChatCompletionTest extends AbstractOpenAITest {
         );
 
         ChatCompletion task = ChatCompletion.builder()
-            .apiKey(Property.of(getApiKey()))
-            .model(Property.of("gpt-4o"))
-            .messages(Property.of(messages))
-            .functions(Property.of(functions))
-            .functionCall(Property.of("auto"))
+            .apiKey(Property.ofValue(getApiKey()))
+            .model(Property.ofValue("gpt-4o"))
+            .messages(Property.ofValue(messages))
+            .functions(Property.ofValue(functions))
+            .functionCall(Property.ofValue("auto"))
             .build();
 
         ChatCompletion.Output runOutput = task.run(runContext);
@@ -143,31 +143,31 @@ class ChatCompletionTest extends AbstractOpenAITest {
 
         List<ChatCompletion.PluginChatFunctionParameter> parameters = List.of(
             ChatCompletion.PluginChatFunctionParameter.builder()
-                .name(Property.of("rating"))
-                .type(Property.of("string"))
-                .description(Property.of("A rating of what the customer thought of our restaurant based on the review they wrote."))
-                .required(Property.of(Boolean.TRUE))
-                .enumValues(Property.of(List.of("excellent", "acceptable", "terrible")))
+                .name(Property.ofValue("rating"))
+                .type(Property.ofValue("string"))
+                .description(Property.ofValue("A rating of what the customer thought of our restaurant based on the review they wrote."))
+                .required(Property.ofValue(Boolean.TRUE))
+                .enumValues(Property.ofValue(List.of("excellent", "acceptable", "terrible")))
                 .build(),
             ChatCompletion.PluginChatFunctionParameter.builder()
-                .name(Property.of("food_eaten"))
-                .type(Property.of("string"))
-                .description(Property.of("A list of the food the customer ate, or 'Unknown' if they did not specify."))
-                .required(Property.of(Boolean.TRUE))
+                .name(Property.ofValue("food_eaten"))
+                .type(Property.ofValue("string"))
+                .description(Property.ofValue("A list of the food the customer ate, or 'Unknown' if they did not specify."))
+                .required(Property.ofValue(Boolean.TRUE))
                 .build(),
             ChatCompletion.PluginChatFunctionParameter.builder()
-                .name(Property.of("customer_name"))
-                .type(Property.of("string"))
-                .description(Property.of("The customer's name."))
-                .required(Property.of(Boolean.TRUE))
+                .name(Property.ofValue("customer_name"))
+                .type(Property.ofValue("string"))
+                .description(Property.ofValue("The customer's name."))
+                .required(Property.ofValue(Boolean.TRUE))
                 .build()
         );
 
         List<ChatCompletion.PluginChatFunction> functions = List.of(
             ChatCompletion.PluginChatFunction.builder()
-                .name(Property.of("record_customer_rating"))
-                .description(Property.of("Saves a customer's rating of our restaurant based on what they wrote in an online review."))
-                .parameters(Property.of(parameters))
+                .name(Property.ofValue("record_customer_rating"))
+                .description(Property.ofValue("Saves a customer's rating of our restaurant based on what they wrote in an online review."))
+                .parameters(Property.ofValue(parameters))
                 .build()
         );
 
@@ -176,11 +176,11 @@ class ChatCompletionTest extends AbstractOpenAITest {
         );
 
         ChatCompletion task = ChatCompletion.builder()
-            .apiKey(Property.of(getApiKey()))
-            .model(Property.of("gpt-4o"))
-            .messages(Property.of(messages))
-            .functions(Property.of(functions))
-            .functionCall(Property.of("record_customer_rating"))
+            .apiKey(Property.ofValue(getApiKey()))
+            .model(Property.ofValue("gpt-4o"))
+            .messages(Property.ofValue(messages))
+            .functions(Property.ofValue(functions))
+            .functionCall(Property.ofValue("record_customer_rating"))
             .build();
 
         ChatCompletion.Output runOutput = task.run(runContext);

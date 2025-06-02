@@ -27,9 +27,9 @@ class CreateImageTest extends AbstractOpenAITest {
         RunContext runContext = runContextFactory.of();
 
         CreateImage task = CreateImage.builder()
-            .apiKey(Property.of(getApiKey()))
-            .prompt(Property.of("A funny cat in a black suit"))
-            .size(Property.of(CreateImage.SIZE.SMALL))
+            .apiKey(Property.ofValue(getApiKey()))
+            .prompt(Property.ofValue("A funny cat in a black suit"))
+            .size(Property.ofValue(CreateImage.SIZE.SMALL))
             .build();
 
         CreateImage.Output runOutput = task.run(runContext);
@@ -42,10 +42,10 @@ class CreateImageTest extends AbstractOpenAITest {
         RunContext runContext = runContextFactory.of();
 
         CreateImage task = CreateImage.builder()
-            .apiKey(Property.of(getApiKey()))
-            .prompt(Property.of("A funny cat in a black suit"))
-            .size(Property.of(CreateImage.SIZE.SMALL))
-            .download(Property.of(Boolean.TRUE))
+            .apiKey(Property.ofValue(getApiKey()))
+            .prompt(Property.ofValue("A funny cat in a black suit"))
+            .size(Property.ofValue(CreateImage.SIZE.SMALL))
+            .download(Property.ofValue(Boolean.TRUE))
             .build();
 
         CreateImage.Output runOutput = task.run(runContext);
