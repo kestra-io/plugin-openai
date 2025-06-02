@@ -345,7 +345,7 @@ public class Responses extends AbstractTask implements RunnableTask<Responses.Ou
     )
     @NotNull
     @Builder.Default
-    private Property<Boolean> store = Property.of(true);
+    private Property<Boolean> store = Property.ofValue(true);
 
     @Schema(
         title = "ID of previous response to continue conversation"
@@ -367,13 +367,13 @@ public class Responses extends AbstractTask implements RunnableTask<Responses.Ou
         title = "Sampling temperature (0-2)"
     )
     @Builder.Default
-    private Property<@Max(2)Double> temperature = Property.of(1.0);
+    private Property<@Max(2)Double> temperature = Property.ofValue(1.0);
 
     @Schema(
         title = "Nucleus sampling parameter (0-1)"
     )
     @Builder.Default
-    private Property<@Max(1) Double> topP = Property.of(1.0);
+    private Property<@Max(1) Double> topP = Property.ofValue(1.0);
 
     @Schema(
         title = "Allow parallel tool execution"

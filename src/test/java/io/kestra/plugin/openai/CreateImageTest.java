@@ -27,12 +27,12 @@ class CreateImageTest extends AbstractOpenAITest {
         RunContext runContext = runContextFactory.of();
 
         CreateImage task = CreateImage.builder()
-            .apiKey(Property.of(getApiKey()))
-            .prompt(Property.of("A funny cat in a black suit"))
-            .size(Property.of(CreateImage.SIZE.LARGE))
+            .apiKey(Property.ofValue(getApiKey()))
+            .prompt(Property.ofValue("A funny cat in a black suit"))
+            .size(Property.ofValue(CreateImage.SIZE.LARGE))
             .n(1)
-            .download(Property.of(Boolean.FALSE))
-            .user(Property.of("test-user"))
+            .download(Property.ofValue(Boolean.FALSE))
+            .user(Property.ofValue("test-user"))
             .build();
 
         CreateImage.Output runOutput = task.run(runContext);
@@ -45,12 +45,12 @@ class CreateImageTest extends AbstractOpenAITest {
         RunContext runContext = runContextFactory.of();
 
         CreateImage task = CreateImage.builder()
-            .apiKey(Property.of(getApiKey()))
-            .prompt(Property.of("A funny cat in a black suit"))
-            .size(Property.of(CreateImage.SIZE.SMALL))
-            .download(Property.of(Boolean.TRUE))
+            .apiKey(Property.ofValue(getApiKey()))
+            .prompt(Property.ofValue("A funny cat in a black suit"))
+            .size(Property.ofValue(CreateImage.SIZE.SMALL))
+            .download(Property.ofValue(Boolean.TRUE))
             .n(1)
-            .user(Property.of("test-user"))
+            .user(Property.ofValue("test-user"))
             .build();
 
         CreateImage.Output runOutput = task.run(runContext);
