@@ -60,14 +60,14 @@ import java.util.Map;
             code = """
                 id: openai_chat
                 namespace: company.team
-                
+
                 tasks:
                   - id: prompt
                     type: io.kestra.plugin.openai.ChatCompletion
                     apiKey: "{{ secret('OPENAI_API_KEY') }}"
                     model: gpt-4o
                     prompt: Explain in one sentence why data engineers build data pipelines
-                
+
                   - id: use_output
                     type: io.kestra.plugin.core.log.Log
                     message: "{{ outputs.prompt.choices | jq('.[].message.content') | first }}"
