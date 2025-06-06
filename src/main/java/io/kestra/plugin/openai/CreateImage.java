@@ -1,15 +1,20 @@
 package io.kestra.plugin.openai;
 
-import com.theokanning.openai.image.CreateImageRequest;
-import com.theokanning.openai.image.ImageResult;
-import com.theokanning.openai.service.OpenAiService;
+import com.openai.client.OpenAIClient;
+import com.openai.models.images.ImageGenerateParams;
+import com.openai.models.images.ImagesResponse;
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
 import io.swagger.v3.oas.annotations.media.Schema;
-import lombok.*;
+import jakarta.validation.constraints.NotNull;
+import lombok.Builder;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.ToString;
 import lombok.experimental.SuperBuilder;
 import org.apache.commons.io.FileUtils;
 
@@ -18,10 +23,9 @@ import java.io.IOException;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.Base64;
+import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
-
-import jakarta.validation.constraints.NotNull;
 
 import static io.kestra.core.utils.Rethrow.throwConsumer;
 
@@ -82,26 +86,30 @@ public class CreateImage extends AbstractTask implements RunnableTask<CreateImag
 
     @Override
     public CreateImage.Output run(RunContext runContext) throws Exception {
-        OpenAiService client = this.client(runContext);
+        OpenAIClient client = this.openAIClient(runContext);
 
         String user = runContext.render(this.user == null ? null : runContext.render(this.user).as(String.class).orElseThrow());
         String prompt = runContext.render(this.prompt).as(String.class).orElseThrow();
+        ImageGenerateParams.ResponseFormat responseFormat = runContext.render(this.download).as(Boolean.class).orElseThrow() ?
+                ImageGenerateParams.ResponseFormat.B64_JSON: ImageGenerateParams.ResponseFormat.URL;
 
-        ImageResult imageResult = client.createImage(CreateImageRequest.builder()
+       ImagesResponse imageResult = client.images().generate(ImageGenerateParams.builder()
             .prompt(prompt)
             .size(runContext.render(this.size).as(SIZE.class).orElseThrow().getSize())
             .n(this.n)
-            .responseFormat(runContext.render(this.download).as(Boolean.class).orElseThrow() ? "b64_json" : "url")
+            .responseFormat(responseFormat)
             .user(user)
-            .build()
-        );
+            .build());
+
 
         List<URI> files = new ArrayList<>();
-        imageResult.getData().forEach(throwConsumer(image -> {
+        imageResult.data().stream()
+            .flatMap(Collection::stream)
+            .forEach(throwConsumer(image -> {
             if (runContext.render(this.download).as(Boolean.class).orElseThrow()) {
-                files.add(runContext.storage().putFile(this.downloadB64Json(image.getB64Json())));
+                files.add(runContext.storage().putFile(this.downloadB64Json(image.b64Json().get())));
             } else {
-                files.add(URI.create(image.getUrl()));
+                files.add(URI.create(image.url().get()));
             }
         }));
 
@@ -127,18 +135,20 @@ public class CreateImage extends AbstractTask implements RunnableTask<CreateImag
     }
 
     protected enum SIZE {
-        SMALL("256x256"),
-        MEDIUM("512x512"),
-        LARGE("1024x1024");
+        SMALL("256x256", ImageGenerateParams.Size._256X256),
+        MEDIUM("512x512", ImageGenerateParams.Size._512X512),
+        LARGE("1024x1024", ImageGenerateParams.Size._1024X1024);
 
         private final String value;
+        private final ImageGenerateParams.Size size;
 
-        SIZE(String value) {
+        SIZE(String value, ImageGenerateParams.Size size) {
             this.value = value;
+            this.size = size;
         }
 
-        public String getSize() {
-            return value;
+        public ImageGenerateParams.Size getSize() {
+            return size;
         }
 
     }
