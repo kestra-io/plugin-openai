@@ -1,8 +1,18 @@
 package io.kestra.plugin.openai;
 
-import com.theokanning.openai.Usage;
-import com.theokanning.openai.completion.chat.*;
-import com.theokanning.openai.service.OpenAiService;
+import com.openai.client.OpenAIClient;
+import com.openai.core.JsonValue;
+import com.openai.models.FunctionDefinition;
+import com.openai.models.FunctionParameters;
+import com.openai.models.chat.completions.ChatCompletionAssistantMessageParam;
+import com.openai.models.chat.completions.ChatCompletionCreateParams;
+import com.openai.models.chat.completions.ChatCompletionMessageParam;
+import com.openai.models.chat.completions.ChatCompletionSystemMessageParam;
+import com.openai.models.chat.completions.ChatCompletionTool;
+import com.openai.models.chat.completions.ChatCompletionToolChoiceOption;
+import com.openai.models.chat.completions.ChatCompletionUserMessageParam;
+import com.openai.models.completions.CompletionUsage;
+import io.kestra.core.exceptions.IllegalVariableEvaluationException;
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.executions.metrics.Counter;
@@ -10,14 +20,21 @@ import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
 import io.swagger.v3.oas.annotations.media.Schema;
-import lombok.*;
+import jakarta.validation.constraints.NotNull;
+import lombok.Builder;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.NonNull;
+import lombok.ToString;
 import lombok.experimental.SuperBuilder;
 
-import jakarta.validation.constraints.NotNull;
 import java.util.ArrayList;
-import java.util.HashSet;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 @SuperBuilder
 @ToString
@@ -171,7 +188,7 @@ public class ChatCompletion extends AbstractTask implements RunnableTask<ChatCom
     @Schema(
         title = "The maximum number of tokens to generate in the chat completion. No limits are set by default."
     )
-    private Property<Integer> maxTokens;
+    private Property<Long> maxTokens;
 
     @Schema(
         title = "Number between -2.0 and 2.0. Positive values penalize new tokens based on whether they appear in the text so far. Defaults to 0."
@@ -194,25 +211,23 @@ public class ChatCompletion extends AbstractTask implements RunnableTask<ChatCom
     )
     @NotNull
     private Property<String> model;
-
     @Override
     public ChatCompletion.Output run(RunContext runContext) throws Exception {
-        OpenAiService client = this.client(runContext);
+        OpenAIClient client = this.openAIClient(runContext);
 
         if (this.messages == null && this.prompt == null) {
             throw new IllegalArgumentException("Either `messages` or `prompt` must be set");
         }
 
-        List<String> stop = this.stop != null ? runContext.render(this.stop).asList(String.class) : null;
+        List<String> stop = this.stop != null ? runContext.render(this.stop).asList(String.class) : Collections.emptyList();
         String user = this.user == null ? null : runContext.render(this.user).as(String.class).orElseThrow();
         String model = this.model == null ? null : runContext.render(this.model).as(String.class).orElseThrow();
 
-        List<ChatMessage> messages = new ArrayList<>();
+        List<ChatCompletionMessageParam> messages = new ArrayList<>();
         // Render all messages content
         if (this.messages != null) {
             for (ChatMessage message : runContext.render(this.messages).asList(ChatMessage.class)) {
-                message.setContent(runContext.render(message.getContent()));
-                messages.add(message);
+                messages.add(buildMessage(message.getRole(), message.getContent()));
             }
         }
 
@@ -220,71 +235,62 @@ public class ChatCompletion extends AbstractTask implements RunnableTask<ChatCom
             messages.add(buildMessage("user", runContext.render(this.prompt).as(String.class).orElseThrow()));
         }
 
-        List<ChatFunctionDynamic> chatFunctions = null;
-
+        List<ChatCompletionTool> chatFunctions = null;
         if (this.functions != null) {
             chatFunctions = new ArrayList<>();
             for (PluginChatFunction function : runContext.render(functions).asList(PluginChatFunction.class)) {
-                var chatParameters = new ChatFunctionParameters();
-
                 if(function.parameters != null) {
-                    for (PluginChatFunctionParameter parameter : runContext.render(function.parameters).asList(PluginChatFunctionParameter.class)) {
-                        chatParameters.addProperty(ChatFunctionProperty.builder()
-                            .name(runContext.render(parameter.name).as(String.class).orElseThrow())
-                            .description(runContext.render(parameter.description).as(String.class).orElseThrow())
-                            .type(runContext.render(parameter.type).as(String.class).orElseThrow())
-                            .required(parameter.required == null ? null : runContext.render(parameter.required).as(Boolean.class).orElseThrow())
-                            .enumValues(parameter.enumValues == null ? null :
-                                new HashSet<>(runContext.render(parameter.enumValues).asList(String.class)))
-                            .build()
-                        );
-                    }
+                    chatFunctions.add(ChatCompletionTool.builder()
+                        .function(toFunctionDefinition(runContext, function))
+                    .build());
                 }
-
-                ChatFunctionDynamic chatFunction = ChatFunctionDynamic.builder()
-                    .name(function.name == null ? null : runContext.render(function.name).as(String.class).orElseThrow())
-                    .description(function.description == null ? null : runContext.render(function.description).as(String.class).orElseThrow())
-                    .parameters(chatParameters).build();
-
-                chatFunctions.add(chatFunction);
             }
         }
-
-        ChatCompletionRequest.ChatCompletionRequestFunctionCall chatFunctionCall = null;
+        ChatCompletionToolChoiceOption chatFunctionCall = null;
 
         if (this.functionCall != null) {
-            chatFunctionCall = ChatCompletionRequest.ChatCompletionRequestFunctionCall.of(
-                runContext.render(this.functionCall).as(String.class).orElseThrow()
-            );
+            var toolName = runContext.render(this.functionCall)
+                .as(String.class)
+                .orElse(ChatCompletionToolChoiceOption.Auto.AUTO.asString());
+            chatFunctionCall = ChatCompletionToolChoiceOption.ofAuto(ChatCompletionToolChoiceOption.Auto.of(toolName));
+        } else {
+            chatFunctionCall = ChatCompletionToolChoiceOption.ofAuto(ChatCompletionToolChoiceOption.Auto.AUTO);
         }
 
-        ChatCompletionResult chatCompletionResult = client.createChatCompletion(ChatCompletionRequest.builder()
+        ChatCompletionCreateParams.Builder builder = ChatCompletionCreateParams.builder()
             .messages(messages)
-            .functions(chatFunctions)
-            .functionCall(chatFunctionCall)
             .model(model)
+            .toolChoice(chatFunctionCall)
             .temperature(this.temperature == null ? null : runContext.render(this.temperature).as(Double.class).orElseThrow())
             .topP(this.topP == null ? null : runContext.render(this.topP).as(Double.class).orElseThrow())
-            .n(this.n == null ? null : runContext.render(this.n).as(Integer.class).orElseThrow())
-            .stop(stop)
-            .maxTokens(this.maxTokens == null ? null : runContext.render(this.maxTokens).as(Integer.class).orElseThrow())
+            .n(this.n == null ? 1 : runContext.render(this.n).as(Integer.class).orElseThrow())
+            .maxCompletionTokens(this.maxTokens == null ? null : runContext.render(this.maxTokens).as(Long.class).orElseThrow())
             .presencePenalty(this.presencePenalty == null ? null : runContext.render(this.presencePenalty).as(Double.class).orElseThrow())
-            .frequencyPenalty(this.frequencyPenalty == null ? null : runContext.render(this.frequencyPenalty).as(Double.class).orElseThrow())
-            .logitBias(this.logitBias == null ? null : runContext.render(this.logitBias).asMap(String.class, Integer.class))
-            .user(user)
-            .build()
-        );
+            .frequencyPenalty(this.frequencyPenalty == null ? null : runContext.render(this.frequencyPenalty).as(Double.class).orElseThrow());
+        Optional.ofNullable(chatFunctions).ifPresent(builder::tools);
+        Optional.ofNullable(user).ifPresent(builder::user);
+        Optional.ofNullable(stop).ifPresent(e-> builder.stop(ChatCompletionCreateParams.Stop.ofStrings(stop)));
+        if (this.logitBias != null) {
+            final Map<String, Integer> logitBias = runContext.render(this.logitBias).asMap(String.class, Integer.class);
+            if (!logitBias.isEmpty()) {
+                builder.logitBias(ChatCompletionCreateParams.LogitBias.builder().putAdditionalProperty(PROPERTIES, JsonValue.from(logitBias)).build());
+            }
+        }
+        final ChatCompletionCreateParams chatCompletionCreateParams = builder.build();
+        com.openai.models.chat.completions.ChatCompletion chatCompletionResult = client.chat().completions()
+            .create(chatCompletionCreateParams);
 
-        runContext.metric(Counter.of("usage.prompt_tokens", chatCompletionResult.getUsage().getPromptTokens()));
-        runContext.metric(Counter.of("usage.completion_tokens", chatCompletionResult.getUsage().getCompletionTokens()));
-        runContext.metric(Counter.of("usage.total_tokens", chatCompletionResult.getUsage().getTotalTokens()));
-
+        if (chatCompletionResult.usage().isPresent()) {
+            runContext.metric(Counter.of("usage.prompt.tokens", chatCompletionResult.usage().get().promptTokens()));
+            runContext.metric(Counter.of("usage.completion.tokens", chatCompletionResult.usage().get().completionTokens()));
+            runContext.metric(Counter.of("usage.total.tokens", chatCompletionResult.usage().get().totalTokens()));
+        }
         return ChatCompletion.Output.builder()
-            .id(chatCompletionResult.getId())
-            .object(chatCompletionResult.getObject())
-            .model(chatCompletionResult.getModel())
-            .choices(chatCompletionResult.getChoices())
-            .usage(chatCompletionResult.getUsage())
+            .id(chatCompletionResult.id())
+            .object(String.valueOf(chatCompletionResult._object_()))
+            .model(chatCompletionResult.model())
+            .choices(chatCompletionResult.choices())
+            .usage(chatCompletionResult.usage().isPresent() ? chatCompletionResult.usage().get() : null)
             .build();
     }
 
@@ -309,12 +315,12 @@ public class ChatCompletion extends AbstractTask implements RunnableTask<ChatCom
         @Schema(
             title = "A list of all generated completions"
         )
-        private List<ChatCompletionChoice> choices;
+        private List<com.openai.models.chat.completions.ChatCompletion.Choice> choices;
 
         @Schema(
             title = "The API usage for this request"
         )
-        private Usage usage;
+        private CompletionUsage usage;
     }
 
     @Builder
@@ -371,12 +377,69 @@ public class ChatCompletion extends AbstractTask implements RunnableTask<ChatCom
         )
         private Property<List<PluginChatFunctionParameter>> parameters;
     }
+    @Builder
+    @Getter
+    public static class ChatMessage {
+        @NonNull
+        String role;
+        String content;
+        String name;
+    }
+    private ChatCompletionMessageParam buildMessage(String role, String content) {
+        return switch (Role.fromString(role)) {
+            case ASSISTANT -> ChatCompletionMessageParam.ofAssistant(
+                ChatCompletionAssistantMessageParam.builder().content(content).build()
+            );
+            case SYSTEM -> ChatCompletionMessageParam.ofSystem(
+                ChatCompletionSystemMessageParam.builder().content(content).build()
+            );
+            case USER -> ChatCompletionMessageParam.ofUser(
+                ChatCompletionUserMessageParam.builder().content(content).build()
+            );
+        };
+    }
+    private enum Role {
+        ASSISTANT, SYSTEM, USER;
+        private static Role fromString(final String role) {
+            return switch (role.toLowerCase()) {
+                case "assistant" -> ASSISTANT;
+                case "system" -> SYSTEM;
+                default -> USER;
+            };
+        }
+    }
+    private static final String TYPE = "type";
+    private static final String ENUM = "enum";
+    private static final String PROPERTIES = "properties";
+    private static final String REQUIRED = "required";
+    private static final String PARAMETERS = "parameters";
+    private static final String DESCRIPTIONS = "description";
+    private static final String STRING = "string";
+    private static final String OBJECT = "object";
+    private static FunctionDefinition toFunctionDefinition(final RunContext runContext,final PluginChatFunction function) throws RuntimeException, IllegalVariableEvaluationException {
+        final Map<String, Object> functionParameters = new HashMap<>();
+        final List<String> requiredList = new ArrayList<>();
 
-    private ChatMessage buildMessage(String role, String content) {
-        ChatMessage message = new ChatMessage();
-        message.setRole(role);
-        message.setContent(content);
-
-        return message;
+        if (function.parameters != null) {
+                for (PluginChatFunctionParameter parameter : runContext.render(function.parameters).asList(PluginChatFunctionParameter.class)) {
+                    if (runContext.render(parameter.required).as(Boolean.class).orElse(false)) {
+                        requiredList.add(parameter.name.toString());
+                    }
+                    functionParameters.put(parameter.name.toString(), Map.of(
+                        TYPE, STRING,
+                        DESCRIPTIONS, parameter.description,
+                        ENUM, Optional.ofNullable(runContext.render(parameter.enumValues).asList(String.class)).orElse(Collections.emptyList())
+                    ));
+                }
+        }
+        return FunctionDefinition.builder()
+            .name(runContext.render(function.name).as(String.class).orElseThrow())
+            .description(runContext.render(function.description).as(String.class).orElseThrow())
+            .parameters(FunctionParameters.builder().putAdditionalProperty(PARAMETERS, JsonValue.from(Map.of(
+                TYPE, OBJECT,
+                PROPERTIES, functionParameters,
+                REQUIRED, requiredList.isEmpty() ? List.of() : requiredList
+            ))).build())
+            .build();
     }
 }

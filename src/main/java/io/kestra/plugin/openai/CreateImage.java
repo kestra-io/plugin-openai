@@ -107,9 +107,11 @@ public class CreateImage extends AbstractTask implements RunnableTask<CreateImag
             .flatMap(Collection::stream)
             .forEach(throwConsumer(image -> {
             if (runContext.render(this.download).as(Boolean.class).orElseThrow()) {
-                files.add(runContext.storage().putFile(this.downloadB64Json(image.b64Json().get())));
+                if (image.b64Json().isPresent()) {
+                    files.add(runContext.storage().putFile(this.downloadB64Json(image.b64Json().get())));
+                }
             } else {
-                files.add(URI.create(image.url().get()));
+                image.url().ifPresent(url -> files.add(URI.create(url)));
             }
         }));
 
