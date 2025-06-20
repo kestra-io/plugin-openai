@@ -3,14 +3,7 @@ package io.kestra.plugin.openai;
 import com.openai.client.OpenAIClient;
 import com.openai.core.JsonValue;
 import com.openai.models.FunctionDefinition;
-import com.openai.models.FunctionParameters;
-import com.openai.models.chat.completions.ChatCompletionAssistantMessageParam;
-import com.openai.models.chat.completions.ChatCompletionCreateParams;
-import com.openai.models.chat.completions.ChatCompletionMessageParam;
-import com.openai.models.chat.completions.ChatCompletionSystemMessageParam;
-import com.openai.models.chat.completions.ChatCompletionTool;
-import com.openai.models.chat.completions.ChatCompletionToolChoiceOption;
-import com.openai.models.chat.completions.ChatCompletionUserMessageParam;
+import com.openai.models.chat.completions.*;
 import com.openai.models.completions.CompletionUsage;
 import io.kestra.core.exceptions.IllegalVariableEvaluationException;
 import io.kestra.core.models.annotations.Example;
@@ -21,20 +14,10 @@ import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
-import lombok.Builder;
-import lombok.EqualsAndHashCode;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.NonNull;
-import lombok.ToString;
+import lombok.*;
 import lombok.experimental.SuperBuilder;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 
 @SuperBuilder
 @ToString
@@ -211,6 +194,7 @@ public class ChatCompletion extends AbstractTask implements RunnableTask<ChatCom
     )
     @NotNull
     private Property<String> model;
+
     @Override
     public ChatCompletion.Output run(RunContext runContext) throws Exception {
         OpenAIClient client = this.openAIClient(runContext);
@@ -239,37 +223,67 @@ public class ChatCompletion extends AbstractTask implements RunnableTask<ChatCom
         if (this.functions != null) {
             chatFunctions = new ArrayList<>();
             for (PluginChatFunction function : runContext.render(functions).asList(PluginChatFunction.class)) {
-                if(function.parameters != null) {
+                if (function.parameters != null) {
                     chatFunctions.add(ChatCompletionTool.builder()
                         .function(toFunctionDefinition(runContext, function))
-                    .build());
+                        .build());
                 }
             }
-        }
-        ChatCompletionToolChoiceOption chatFunctionCall = null;
-
-        if (this.functionCall != null) {
-            var toolName = runContext.render(this.functionCall)
-                .as(String.class)
-                .orElse(ChatCompletionToolChoiceOption.Auto.AUTO.asString());
-            chatFunctionCall = ChatCompletionToolChoiceOption.ofAuto(ChatCompletionToolChoiceOption.Auto.of(toolName));
-        } else {
-            chatFunctionCall = ChatCompletionToolChoiceOption.ofAuto(ChatCompletionToolChoiceOption.Auto.AUTO);
         }
 
         ChatCompletionCreateParams.Builder builder = ChatCompletionCreateParams.builder()
             .messages(messages)
             .model(model)
-            .toolChoice(chatFunctionCall)
             .temperature(this.temperature == null ? null : runContext.render(this.temperature).as(Double.class).orElseThrow())
             .topP(this.topP == null ? null : runContext.render(this.topP).as(Double.class).orElseThrow())
             .n(this.n == null ? 1 : runContext.render(this.n).as(Integer.class).orElseThrow())
             .maxCompletionTokens(this.maxTokens == null ? null : runContext.render(this.maxTokens).as(Long.class).orElseThrow())
             .presencePenalty(this.presencePenalty == null ? null : runContext.render(this.presencePenalty).as(Double.class).orElseThrow())
             .frequencyPenalty(this.frequencyPenalty == null ? null : runContext.render(this.frequencyPenalty).as(Double.class).orElseThrow());
-        Optional.ofNullable(chatFunctions).ifPresent(builder::tools);
+
+        String renderedFunctionCall = this.functionCall != null ? runContext.render(this.functionCall).as(String.class).orElse("auto") : "auto";
+
+        if (chatFunctions != null && !chatFunctions.isEmpty()) {
+            builder.tools(chatFunctions); // Always include tools if available
+
+            if (renderedFunctionCall.equalsIgnoreCase("auto")) {
+                builder.toolChoice(ChatCompletionToolChoiceOption.ofAuto(ChatCompletionToolChoiceOption.Auto.AUTO));
+            } else if (renderedFunctionCall.equalsIgnoreCase("none")) {
+                builder.toolChoice(ChatCompletionToolChoiceOption.Auto.NONE);
+            } else {
+                // This is for forcing a specific function call
+                // Need to ensure the requested function name exists in chatFunctions if strict
+                boolean functionExists = chatFunctions.stream()
+                    .anyMatch(tool -> tool.function().name().equals(renderedFunctionCall));
+
+                if (!functionExists) {
+                    throw new IllegalArgumentException("Requested function '" + renderedFunctionCall + "' for `functionCall` is not provided in `functions` list.");
+                }
+
+                builder.toolChoice(ChatCompletionToolChoiceOption.ofNamedToolChoice(
+                    ChatCompletionNamedToolChoice.builder()
+                        .function(ChatCompletionNamedToolChoice.Function.builder().name(renderedFunctionCall).build())
+                        .build()
+                ));
+            }
+        } else {
+            if (renderedFunctionCall.equalsIgnoreCase("none")) {
+                // If user explicitly asks for "none", we set it even without tools.
+                // This tells the model not to attempt any function call.
+                builder.toolChoice(ChatCompletionToolChoiceOption.Auto.NONE);
+            } else if (!renderedFunctionCall.equalsIgnoreCase("auto")) {
+                // If a specific function name or "required" is requested but no tools are provided, it's an error.
+                // Assuming "required" is not a string value here, but handled by the specific `ofChatCompletionToolChoiceRequired()`
+                // if it were to be supported via a string input.
+                throw new IllegalArgumentException("Cannot specify a function name for `functionCall` ('" + renderedFunctionCall + "') when no `functions` are provided.");
+            }
+            // If renderedFunctionCall is "auto" (and no functions provided), we do nothing.
+            // OpenAI's default for `tool_choice` is "auto" when `tools` are present,
+            // and no tool_choice parameter should be sent if no `tools` are provided and "auto" is desired.
+        }
+
         Optional.ofNullable(user).ifPresent(builder::user);
-        Optional.ofNullable(stop).ifPresent(e-> builder.stop(ChatCompletionCreateParams.Stop.ofStrings(stop)));
+        Optional.ofNullable(stop).ifPresent(e -> builder.stop(ChatCompletionCreateParams.Stop.ofStrings(stop)));
         if (this.logitBias != null) {
             final Map<String, Integer> logitBias = runContext.render(this.logitBias).asMap(String.class, Integer.class);
             if (!logitBias.isEmpty()) {
@@ -308,7 +322,7 @@ public class ChatCompletion extends AbstractTask implements RunnableTask<ChatCom
         private String object;
 
         @Schema(
-            title="The GPT model used"
+            title = "The GPT model used"
         )
         private String model;
 
@@ -377,6 +391,7 @@ public class ChatCompletion extends AbstractTask implements RunnableTask<ChatCom
         )
         private Property<List<PluginChatFunctionParameter>> parameters;
     }
+
     @Builder
     @Getter
     public static class ChatMessage {
@@ -385,6 +400,7 @@ public class ChatCompletion extends AbstractTask implements RunnableTask<ChatCom
         String content;
         String name;
     }
+
     private ChatCompletionMessageParam buildMessage(String role, String content) {
         return switch (Role.fromString(role)) {
             case ASSISTANT -> ChatCompletionMessageParam.ofAssistant(
@@ -398,8 +414,10 @@ public class ChatCompletion extends AbstractTask implements RunnableTask<ChatCom
             );
         };
     }
+
     private enum Role {
         ASSISTANT, SYSTEM, USER;
+
         private static Role fromString(final String role) {
             return switch (role.toLowerCase()) {
                 case "assistant" -> ASSISTANT;
@@ -408,6 +426,7 @@ public class ChatCompletion extends AbstractTask implements RunnableTask<ChatCom
             };
         }
     }
+
     private static final String TYPE = "type";
     private static final String ENUM = "enum";
     private static final String PROPERTIES = "properties";
@@ -416,30 +435,45 @@ public class ChatCompletion extends AbstractTask implements RunnableTask<ChatCom
     private static final String DESCRIPTIONS = "description";
     private static final String STRING = "string";
     private static final String OBJECT = "object";
-    private static FunctionDefinition toFunctionDefinition(final RunContext runContext,final PluginChatFunction function) throws RuntimeException, IllegalVariableEvaluationException {
-        final Map<String, Object> functionParameters = new HashMap<>();
+
+    private static FunctionDefinition toFunctionDefinition(final RunContext runContext, final PluginChatFunction function) throws RuntimeException, IllegalVariableEvaluationException {
+        final Map<String, Object> functionProperties = new HashMap<>();
         final List<String> requiredList = new ArrayList<>();
 
         if (function.parameters != null) {
-                for (PluginChatFunctionParameter parameter : runContext.render(function.parameters).asList(PluginChatFunctionParameter.class)) {
-                    if (runContext.render(parameter.required).as(Boolean.class).orElse(false)) {
-                        requiredList.add(parameter.name.toString());
-                    }
-                    functionParameters.put(parameter.name.toString(), Map.of(
-                        TYPE, STRING,
-                        DESCRIPTIONS, parameter.description,
-                        ENUM, Optional.ofNullable(runContext.render(parameter.enumValues).asList(String.class)).orElse(Collections.emptyList())
-                    ));
+            for (PluginChatFunctionParameter parameter : runContext.render(function.parameters).asList(PluginChatFunctionParameter.class)) {
+                String paramName = runContext.render(parameter.name).as(String.class).orElseThrow(() -> new IllegalVariableEvaluationException("Parameter name cannot be null"));
+                String paramDescription = runContext.render(parameter.description).as(String.class).orElse(null);
+                String paramType = runContext.render(parameter.type).as(String.class).orElseThrow(() -> new IllegalVariableEvaluationException("Parameter type cannot be null"));
+                List<String> paramEnumValues = Optional.ofNullable(runContext.render(parameter.enumValues).asList(String.class)).orElse(Collections.emptyList());
+                Boolean paramRequired = runContext.render(parameter.required).as(Boolean.class).orElse(false);
+
+                if (paramRequired) {
+                    requiredList.add(paramName);
                 }
+
+                Map<String, Object> paramSchema = new HashMap<>();
+                paramSchema.put(TYPE, paramType);
+                if (paramDescription != null) {
+                    paramSchema.put(DESCRIPTIONS, paramDescription);
+                }
+                if (!paramEnumValues.isEmpty()) {
+                    paramSchema.put(ENUM, paramEnumValues);
+                }
+
+                functionProperties.put(paramName, paramSchema);
+            }
         }
+
+        Map<String, Object> parametersSchema = new HashMap<>();
+        parametersSchema.put(TYPE, OBJECT);
+        parametersSchema.put(PROPERTIES, functionProperties);
+        parametersSchema.put(REQUIRED, requiredList.isEmpty() ? Collections.emptyList() : requiredList);
+
         return FunctionDefinition.builder()
-            .name(runContext.render(function.name).as(String.class).orElseThrow())
-            .description(runContext.render(function.description).as(String.class).orElseThrow())
-            .parameters(FunctionParameters.builder().putAdditionalProperty(PARAMETERS, JsonValue.from(Map.of(
-                TYPE, OBJECT,
-                PROPERTIES, functionParameters,
-                REQUIRED, requiredList.isEmpty() ? List.of() : requiredList
-            ))).build())
+            .name(runContext.render(function.name).as(String.class).orElseThrow(() -> new IllegalVariableEvaluationException("Function name cannot be null")))
+            .description(runContext.render(function.description).as(String.class).orElse(null))
+            .parameters(JsonValue.from(parametersSchema))
             .build();
     }
 }

@@ -1,6 +1,5 @@
 package io.kestra.plugin.openai;
 
-
 import com.openai.models.chat.completions.ChatCompletionMessageToolCall;
 import io.kestra.core.junit.annotations.KestraTest;
 import io.kestra.core.models.property.Property;
@@ -16,7 +15,6 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.is;
 
-
 @KestraTest
 @DisabledIf(
     value = "canNotBeEnabled",
@@ -31,7 +29,7 @@ class ChatCompletionTest extends AbstractOpenAITest {
         RunContext runContext = runContextFactory.of();
 
         List<ChatCompletion.ChatMessage> messages = List.of(
-            buildMessage("user","what is the capital of France?")
+            buildMessage("user", "what is the capital of France?")
         );
 
         ChatCompletion task = ChatCompletion.builder()
@@ -39,15 +37,14 @@ class ChatCompletionTest extends AbstractOpenAITest {
             .model(Property.of("gpt-4o"))
             .clientTimeout(30)
             .messages(Property.of(messages))
-            .maxTokens(Property.of(1L))
-            .user(Property.ofValue("test-user"))
+            .maxTokens(Property.of(15L))
             .build();
 
         ChatCompletion.Output runOutput = task.run(runContext);
 
         assertThat(runOutput.getChoices().getFirst().message().content().get(), containsString("Paris"));
         assertThat(runOutput.getModel(), containsString("gpt-4o"));
-        assertThat(runOutput.getUsage(), is(14L));
+        assertThat(runOutput.getUsage().promptTokens(), is(14L));
     }
 
     @Test
@@ -72,8 +69,8 @@ class ChatCompletionTest extends AbstractOpenAITest {
         RunContext runContext = runContextFactory.of();
 
         List<ChatCompletion.ChatMessage> messages = List.of(
-            buildMessage("user","what is the capital of France?"),
-            buildMessage("assistant","The capital of France is Paris.")
+            buildMessage("user", "what is the capital of France?"),
+            buildMessage("assistant", "The capital of France is Paris.")
         );
 
         ChatCompletion task = ChatCompletion.builder()
@@ -115,11 +112,10 @@ class ChatCompletionTest extends AbstractOpenAITest {
                 .description(Property.of("finds the most relevant city and its temperature unit"))
                 .parameters(Property.of(parameters))
                 .build()
-
         );
 
         List<ChatCompletion.ChatMessage> messages = List.of(
-            buildMessage("user","I was travelling along the Mediterranean coast, and I ended up in Lyon.")
+            buildMessage("user", "I was travelling along the Mediterranean coast, and I ended up in Lyon.")
         );
 
         ChatCompletion task = ChatCompletion.builder()
@@ -127,16 +123,15 @@ class ChatCompletionTest extends AbstractOpenAITest {
             .model(Property.of("gpt-4o"))
             .messages(Property.of(messages))
             .functions(Property.of(functions))
-            .functionCall(Property.of("auto"))
+            .functionCall(Property.of("test"))
             .build();
 
         ChatCompletion.Output runOutput = task.run(runContext);
         ChatCompletionMessageToolCall.Function functionCall = runOutput.getChoices().getFirst().message().toolCalls()
-               .get().getFirst().function();
-
+            .get().getFirst().function();
 
         assertThat(functionCall.name(), containsString("test"));
-        assertThat(functionCall._additionalProperties().get("location").toString(), containsString("Lyon"));
+        assertThat(functionCall._arguments().asString().orElse(""), containsString("Lyon"));
         assertThat(runOutput.getModel(), containsString("gpt-4o"));
     }
 
@@ -175,7 +170,7 @@ class ChatCompletionTest extends AbstractOpenAITest {
         );
 
         List<ChatCompletion.ChatMessage> messages = List.of(
-            buildMessage("user","My name is John Smith. I ate at your restaurant last week and order the steak. It was the worst steak I've even eaten. I will not be returning!")
+            buildMessage("user", "My name is John Smith. I ate at your restaurant last week and order the steak. It was the worst steak I've even eaten. I will not be returning!")
         );
 
         ChatCompletion task = ChatCompletion.builder()
@@ -183,9 +178,8 @@ class ChatCompletionTest extends AbstractOpenAITest {
             .model(Property.of("gpt-4o"))
             .messages(Property.of(messages))
             .functions(Property.of(functions))
-            .functionCall(Property.of("record_customer_rating"))
-            .maxTokens(Property.of(1L))
-            .user(Property.ofValue("test-user"))
+            .functionCall(Property.of("auto"))
+            .maxTokens(Property.of(50L))
             .build();
 
         ChatCompletion.Output runOutput = task.run(runContext);
@@ -193,15 +187,13 @@ class ChatCompletionTest extends AbstractOpenAITest {
             .get().getFirst().function();
 
         assertThat(functionCall.name(), containsString("record_customer_rating"));
-        assertThat(functionCall._additionalProperties().get("rating").toString(), containsString("terrible"));
-        assertThat(functionCall._additionalProperties()
-            .get("food_eaten").toString()
-            .toLowerCase(), containsString("steak"));
-        assertThat(functionCall._additionalProperties().get("customer_name").toString(), containsString("John Smith"));
+        assertThat(functionCall._arguments().asString().orElse(""), containsString("terrible"));
+        assertThat(functionCall._arguments().asString().orElse(""), containsString("steak"));
+        assertThat(functionCall._arguments().asString().orElse(""), containsString("John Smith"));
         assertThat(runOutput.getModel(), containsString("gpt-4o"));
     }
 
     private ChatCompletion.ChatMessage buildMessage(String role, String content) {
-       return ChatCompletion.ChatMessage.builder().role(role).content(content).build();
+        return ChatCompletion.ChatMessage.builder().role(role).content(content).build();
     }
 }
