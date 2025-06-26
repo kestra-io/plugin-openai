@@ -140,7 +140,7 @@ public class ChatCompletion extends AbstractTask implements RunnableTask<ChatCom
         title = "The name of the function OpenAI should generate a call for.",
         description = "Enter a specific function name, or 'auto' to let the model decide. The default is auto."
     )
-    private Property<String> functionCall;
+    private Property<String> functionCall = Property.ofValue("auto");
 
     @Schema(
         title = "The prompt(s) to generate completions for. By default, this prompt will be sent as a `user` role.",
@@ -161,7 +161,7 @@ public class ChatCompletion extends AbstractTask implements RunnableTask<ChatCom
     @Schema(
         title = "How many chat completion choices to generate for each input message. Defaults to 1."
     )
-    private Property<Integer> n;
+    private Property<Integer> n = Property.ofValue(1);
 
     @Schema(
         title = "Up to 4 sequences where the API will stop generating further tokens. Defaults to null."
@@ -236,7 +236,7 @@ public class ChatCompletion extends AbstractTask implements RunnableTask<ChatCom
             .model(model)
             .temperature(this.temperature == null ? null : runContext.render(this.temperature).as(Double.class).orElseThrow())
             .topP(this.topP == null ? null : runContext.render(this.topP).as(Double.class).orElseThrow())
-            .n(this.n == null ? 1 : runContext.render(this.n).as(Integer.class).orElseThrow())
+            .n(runContext.render(this.n).as(Integer.class).orElseThrow())
             .maxCompletionTokens(this.maxTokens == null ? null : runContext.render(this.maxTokens).as(Long.class).orElseThrow())
             .presencePenalty(this.presencePenalty == null ? null : runContext.render(this.presencePenalty).as(Double.class).orElseThrow())
             .frequencyPenalty(this.frequencyPenalty == null ? null : runContext.render(this.frequencyPenalty).as(Double.class).orElseThrow());

@@ -74,7 +74,7 @@ public class CreateImage extends AbstractTask implements RunnableTask<CreateImag
     )
     @Builder.Default
     @NotNull
-    private Property<SIZE> size = Property.of(SIZE.LARGE);
+    private Property<SIZE> size = Property.ofValue(SIZE.LARGE);
 
     @Schema(
         title = "Whether to download the generated image",
@@ -82,7 +82,7 @@ public class CreateImage extends AbstractTask implements RunnableTask<CreateImag
     )
     @Builder.Default
     @NotNull
-    private Property<Boolean> download = Property.of(Boolean.FALSE);
+    private Property<Boolean> download = Property.ofValue(Boolean.FALSE);
 
     @Override
     public CreateImage.Output run(RunContext runContext) throws Exception {
