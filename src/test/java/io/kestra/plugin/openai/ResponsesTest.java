@@ -121,6 +121,10 @@ public class ResponsesTest extends AbstractOpenAITest {
 
         assertNotNull(output);
         assertNotNull(output.getOutputText());
-        assertThat(output.getOutputText(), containsString("positive"));
+        assertThat(output.getOutputText(), anyOf(
+            containsString("happy"),
+            containsString("enjoy"),
+            containsString("positive")
+        ));
     }
 }

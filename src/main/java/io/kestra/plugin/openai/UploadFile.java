@@ -1,7 +1,9 @@
 package io.kestra.plugin.openai;
 
-import com.theokanning.openai.file.File;
-import com.theokanning.openai.service.OpenAiService;
+import com.openai.client.OpenAIClient;
+import com.openai.models.files.FilePurpose;
+import com.openai.models.uploads.Upload;
+import com.openai.models.uploads.UploadCreateParams;
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.annotations.PluginProperty;
@@ -14,8 +16,6 @@ import lombok.*;
 import lombok.experimental.SuperBuilder;
 
 import jakarta.validation.constraints.NotNull;
-import org.apache.commons.io.FilenameUtils;
-import org.apache.commons.io.IOUtils;
 import org.slf4j.Logger;
 
 import java.io.*;
@@ -99,7 +99,7 @@ public class UploadFile extends AbstractTask implements RunnableTask<UploadFile.
     public UploadFile.Output run(RunContext runContext) throws Exception {
         Logger logger = runContext.logger();
 
-        OpenAiService client = this.client(runContext);
+        OpenAIClient client = this.openAIClient(runContext);
 
         String purpose = runContext.render(this.purpose).as(String.class).orElseThrow();
         String renderedFrom = runContext.render(this.from).as(String.class).orElseThrow();
@@ -111,9 +111,34 @@ public class UploadFile extends AbstractTask implements RunnableTask<UploadFile.
 
         Files.copy(runContext.storage().getFile(from), tempFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
 
-        File fileObject = client.uploadFile(purpose,tempFile.getPath());
+        Upload fileObject = client.uploads().create(buildUploadCreateParams(purpose,tempFile.getPath()));
 
-        return Output.builder().fileId(fileObject.getId()).build();
+        return Output.builder().fileId(fileObject.id()).build();
+    }
+
+    public UploadCreateParams buildUploadCreateParams(final String purpose, final String filepath) throws IOException {
+        java.io.File file = new java.io.File(filepath);
+        String mimeType = Files.probeContentType(file.toPath());
+        return UploadCreateParams.builder()
+                .body(UploadCreateParams.Body.builder()
+                .filename(file.getName())
+                .purpose(getFilePurpose(purpose))
+                .mimeType(mimeType)
+                .bytes(file.length())
+                .build())
+                .build();
+    }
+
+    private static FilePurpose getFilePurpose(final String purpose) {
+        return switch (purpose.toLowerCase()) {
+            case "assistants" -> FilePurpose.ASSISTANTS;
+            case "fine-tune" -> FilePurpose.FINE_TUNE;
+            case "vision" -> FilePurpose.VISION;
+            case "user_data" -> FilePurpose.USER_DATA;
+            case "evals" -> FilePurpose.EVALS;
+            case "batch" -> FilePurpose.BATCH;
+            default -> FilePurpose.ASSISTANTS;
+        };
     }
 
     @Builder
