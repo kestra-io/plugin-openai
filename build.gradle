@@ -52,7 +52,7 @@ dependencies {
     compileOnly group: "io.kestra", name: "core", version: kestraVersion
 
     // libs included in the final jar
-    api group: 'com.openai', name: 'openai-java', version: '2.12.4'
+    api group: 'com.openai', name: 'openai-java', version: '2.20.1'
 }
 
 
