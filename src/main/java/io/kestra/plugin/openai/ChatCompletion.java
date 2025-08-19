@@ -3,6 +3,7 @@ package io.kestra.plugin.openai;
 import com.openai.client.OpenAIClient;
 import com.openai.core.JsonValue;
 import com.openai.models.FunctionDefinition;
+import com.openai.models.ResponseFormatJsonSchema;
 import com.openai.models.chat.completions.*;
 import com.openai.models.completions.CompletionUsage;
 import io.kestra.core.exceptions.IllegalVariableEvaluationException;
@@ -12,11 +13,13 @@ import io.kestra.core.models.executions.metrics.Counter;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
+import io.kestra.core.serializers.JacksonMapper;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 
+import java.io.IOException;
 import java.util.*;
 
 @SuperBuilder
@@ -199,6 +202,13 @@ public class ChatCompletion extends AbstractTask implements RunnableTask<ChatCom
     @NotNull
     private Property<String> model;
 
+    @Schema(
+        title = "JSON Response Schema",
+        description = "JSON schema (as string) to force a Structured Output. " +
+            "If provided, the request includes response_format = { type: \"json_schema\", json_schema: { name, schema, strict } }."
+    )
+    private Property<String> jsonResponseSchema;
+
     @Override
     public ChatCompletion.Output run(RunContext runContext) throws Exception {
         OpenAIClient client = this.openAIClient(runContext);
@@ -210,6 +220,7 @@ public class ChatCompletion extends AbstractTask implements RunnableTask<ChatCom
         List<String> stop = this.stop != null ? runContext.render(this.stop).asList(String.class) : Collections.emptyList();
         String user = this.user == null ? null : runContext.render(this.user).as(String.class).orElseThrow();
         String model = this.model == null ? null : runContext.render(this.model).as(String.class).orElseThrow();
+        var rJsonResponseSchema = runContext.render(this.jsonResponseSchema).as(String.class).orElse(null);
 
         List<ChatCompletionMessageParam> messages = new ArrayList<>();
         // Render all messages content
@@ -244,6 +255,10 @@ public class ChatCompletion extends AbstractTask implements RunnableTask<ChatCom
             .maxCompletionTokens(this.maxTokens == null ? null : runContext.render(this.maxTokens).as(Long.class).orElseThrow())
             .presencePenalty(this.presencePenalty == null ? null : runContext.render(this.presencePenalty).as(Double.class).orElseThrow())
             .frequencyPenalty(this.frequencyPenalty == null ? null : runContext.render(this.frequencyPenalty).as(Double.class).orElseThrow());
+
+        if (rJsonResponseSchema != null) {
+            builder.responseFormat(buildOpenAIResponseFormat(rJsonResponseSchema));
+        }
 
         String renderedFunctionCall = this.functionCall != null ? runContext.render(this.functionCall).as(String.class).orElse("auto") : "auto";
 
@@ -417,6 +432,31 @@ public class ChatCompletion extends AbstractTask implements RunnableTask<ChatCom
                 ChatCompletionUserMessageParam.builder().content(content).build()
             );
         };
+    }
+
+    private static ChatCompletionCreateParams.ResponseFormat buildOpenAIResponseFormat(String schemaJson)
+        throws IOException {
+
+        @SuppressWarnings("unchecked")
+        Map<String, Object> schemaMap = JacksonMapper.ofJson()
+            .readValue(schemaJson, Map.class);
+
+        var schemaBuilder = ResponseFormatJsonSchema.JsonSchema.Schema.builder();
+        for (var e : schemaMap.entrySet()) {
+            schemaBuilder.putAdditionalProperty(e.getKey(), JsonValue.from(e.getValue()));
+        }
+
+        var jsonSchema = ResponseFormatJsonSchema.JsonSchema.builder()
+            .name("kestra_schema")
+            .strict(true)
+            .schema(schemaBuilder.build())
+            .build();
+
+        var rfJsonSchema = ResponseFormatJsonSchema.builder()
+            .jsonSchema(jsonSchema)
+            .build();
+
+        return ChatCompletionCreateParams.ResponseFormat.ofJsonSchema(rfJsonSchema);
     }
 
     private enum Role {
