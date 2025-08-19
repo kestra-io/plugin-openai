@@ -302,7 +302,7 @@ import java.util.Objects;
                           required:
                             - food
                 """
-     
+
         )
     }
 )
@@ -331,7 +331,7 @@ public class Responses extends AbstractTask implements RunnableTask<Responses.Ou
         title = "List of built-in tools to enable",
         description = "e.g., web_search, file_search, function calling"
     )
-    private Property<List<Tool>> tools;
+    private Property<List<Map<String, Object>>> tools;
 
     @Schema(
         title = "Controls which tool is called by the model",
@@ -398,7 +398,7 @@ public class Responses extends AbstractTask implements RunnableTask<Responses.Ou
 
         List<ResponseInputItem.Message> renderedInput = ParametersUtils.listParameters(runContext, input);
 
-        List<Tool> renderedTools = runContext.render(tools).asList(Tool.class);
+        List<Map<String, Object>> renderedTools = runContext.render(this.tools).asList(Map.class);
 
         List<ResponseInputItem> responseInputItem = renderedInput.stream().map(ResponseInputItem::ofMessage).toList();
 
@@ -412,7 +412,11 @@ public class Responses extends AbstractTask implements RunnableTask<Responses.Ou
             .topP(renderedTopP);
 
         if (renderedTools != null && !renderedTools.isEmpty()) {
-            paramsBuilder.tools(renderedTools);
+            List<Tool> sdkTools = renderedTools.stream()
+                .map(t -> ParametersUtils.OBJECT_MAPPER.convertValue(t, com.openai.models.responses.Tool.class))
+                .toList();
+
+            paramsBuilder.tools(sdkTools);
         }
 
         paramsBuilder.toolChoice(ToolChoiceOptions.of(renderedToolChoice.name().toLowerCase(Locale.ROOT)));

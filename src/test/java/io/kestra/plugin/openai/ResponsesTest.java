@@ -1,9 +1,6 @@
 package io.kestra.plugin.openai;
 
 import com.openai.core.JsonValue;
-import com.openai.models.responses.FunctionTool;
-import com.openai.models.responses.Tool;
-import com.openai.models.responses.WebSearchTool;
 import io.kestra.core.junit.annotations.KestraTest;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.runners.RunContext;
@@ -57,9 +54,11 @@ public class ResponsesTest extends AbstractOpenAITest {
     void testWebSearchTool() throws Exception {
         RunContext runContext = runContextFactory.of();
 
-        Tool webSearchTool = Tool.ofWebSearch(WebSearchTool.builder()
-            .type(WebSearchTool.Type.WEB_SEARCH_PREVIEW)
-            .build());
+        Map<String, Object> webSearchTool = Map.of(
+            "type", "web_search_preview",
+             "search_context_size", "low",
+             "user_location", Map.of("type", "approximate", "city", "Berlin", "region", "Berlin", "country", "DE")
+        );
 
         Responses task = Responses.builder()
             .id("test-web-search")
@@ -100,12 +99,13 @@ public class ResponsesTest extends AbstractOpenAITest {
             "additionalProperties", JsonValue.from(false)
         );
 
-        Tool functionTool = Tool.ofFunction(FunctionTool.builder()
-            .name("respond_to_review")
-            .description("Analyze the sentiment of the provided text")
-            .strict(true)
-            .parameters(FunctionTool.Parameters.builder().additionalProperties(toolParameters).build())
-            .build());
+        Map<String, Object> functionTool = Map.of(
+            "type", "function",
+            "name", "respond_to_review",
+            "description", "Analyze the sentiment of the provided text in one word",
+            "strict", true,
+            "parameters", toolParameters
+        );
 
         Responses task = Responses.builder()
             .id("test-function")
@@ -122,9 +122,9 @@ public class ResponsesTest extends AbstractOpenAITest {
         assertNotNull(output);
         assertNotNull(output.getOutputText());
         assertThat(output.getOutputText(), anyOf(
-            containsString("happy"),
-            containsString("enjoy"),
-            containsString("positive")
+            containsStringIgnoringCase("happy"),
+            containsStringIgnoringCase("enjoy"),
+            containsStringIgnoringCase("positive")
         ));
     }
 }
