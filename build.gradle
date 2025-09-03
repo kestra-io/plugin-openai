@@ -60,6 +60,8 @@ dependencies {
         exclude group: 'com.fasterxml.jackson.dataformat'
         exclude group: 'org.jetbrains.kotlin'
     }
+
+    api 'com.fasterxml.jackson.module:jackson-module-kotlin:2.2.10'
 }
 
 
