@@ -239,9 +239,9 @@ public class ChatCompletion extends AbstractTask implements RunnableTask<ChatCom
             chatFunctions = new ArrayList<>();
             for (PluginChatFunction function : runContext.render(functions).asList(PluginChatFunction.class)) {
                 if (function.parameters != null) {
-                    chatFunctions.add(ChatCompletionTool.builder()
+                    chatFunctions.add(ChatCompletionTool.ofFunction(ChatCompletionFunctionTool.builder()
                         .function(toFunctionDefinition(runContext, function))
-                        .build());
+                        .build()));
                 }
             }
         }
@@ -273,7 +273,10 @@ public class ChatCompletion extends AbstractTask implements RunnableTask<ChatCom
                 // This is for forcing a specific function call
                 // Need to ensure the requested function name exists in chatFunctions if strict
                 boolean functionExists = chatFunctions.stream()
-                    .anyMatch(tool -> tool.function().name().equals(renderedFunctionCall));
+                    .map(ChatCompletionTool::function)
+                    .flatMap(Optional::stream)
+                    .map(f -> f.function().name())
+                    .anyMatch(renderedFunctionCall::equals);
 
                 if (!functionExists) {
                     throw new IllegalArgumentException("Requested function '" + renderedFunctionCall + "' for `functionCall` is not provided in `functions` list.");
