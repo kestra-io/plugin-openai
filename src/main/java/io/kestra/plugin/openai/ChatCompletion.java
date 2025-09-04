@@ -118,11 +118,11 @@ import java.util.*;
 
                   - id: response_urgency
                     type: io.kestra.plugin.core.debug.Return
-                    format: "{{ outputs.prioritize_response.choices[0].message.function_call.arguments.response_urgency }}"
+                    format: "{{ outputs.prioritize_response | jq('.choices[0].message.tool_calls[0].function.arguments | fromjson | .response_urgency') | first }}"
 
                   - id: response_text
                     type: io.kestra.plugin.core.debug.Return
-                    format: "{{ outputs.prioritize_response.choices[0].message.function_call.arguments.response_text }}"
+                    format: "{{ outputs.prioritize_response | jq('.choices[0].message.tool_calls[0].function.arguments | fromjson | .response_text') | first }}"
                 """
         )
     }
