@@ -1,5 +1,6 @@
 package io.kestra.plugin.openai;
 
+import com.openai.models.chat.completions.ChatCompletionMessageFunctionToolCall;
 import com.openai.models.chat.completions.ChatCompletionMessageToolCall;
 import io.kestra.core.junit.annotations.KestraTest;
 import io.kestra.core.models.property.Property;
@@ -127,8 +128,8 @@ class ChatCompletionTest extends AbstractOpenAITest {
             .build();
 
         ChatCompletion.Output runOutput = task.run(runContext);
-        ChatCompletionMessageToolCall.Function functionCall = runOutput.getChoices().getFirst().message().toolCalls()
-            .get().getFirst().function();
+        var functionCall = runOutput.getChoices().getFirst().message().toolCalls()
+            .get().getFirst().asFunction().function();
 
         assertThat(functionCall.name(), containsString("test"));
         assertThat(functionCall._arguments().asString().orElse(""), containsString("Lyon"));
@@ -183,8 +184,9 @@ class ChatCompletionTest extends AbstractOpenAITest {
             .build();
 
         ChatCompletion.Output runOutput = task.run(runContext);
-        ChatCompletionMessageToolCall.Function functionCall = runOutput.getChoices().getFirst().message().toolCalls()
-            .get().getFirst().function();
+        var functionCall = runOutput.getChoices().getFirst().message()
+                .toolCalls().orElse(List.of())
+                .getFirst().asFunction().function();
 
         assertThat(functionCall.name(), containsString("record_customer_rating"));
         assertThat(functionCall._arguments().asString().orElse(""), containsString("terrible"));
