@@ -1,0 +1,8 @@
+group: io.kestra.plugin.openai
+name: "openai"
+title: "OpenAI"
+description: "Interact with OpenAI from Kestra."
+body: ""
+videos: []
+createdBy: "Kestra Core Team"
+managedBy: "Kestra Core Team"
