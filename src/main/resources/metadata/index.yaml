@@ -1,8 +1,8 @@
 group: io.kestra.plugin.openai
 name: "openai"
 title: "OpenAI"
-description: "Interact with OpenAI from Kestra."
-body: ""
+description: "Tasks that call OpenAI for chat completions, images, and file uploads."
+body: "Set your OpenAI API key (and optional base URL/org) plus model names to generate chat responses, create images, or upload files for fine-tuning, returning results and usage details for downstream steps."
 videos: []
 createdBy: "Kestra Core Team"
 managedBy: "Kestra Core Team"
