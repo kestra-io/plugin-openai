@@ -29,8 +29,8 @@ import java.util.Objects;
 @Getter
 @NoArgsConstructor
 @Schema(
-    title = "Interact with LLMs using OpenAI's Responses API with built-in tools and structured output.",
-    description = "For more information, refer to the [OpenAI Responses API docs](https://platform.openai.com/docs/guides/responses)."
+    title = "Call OpenAI Responses with tools",
+    description = "Uses the Responses API for chat, tool calls, and structured text output. Supports web/file search and function tools, optional JSON Schema formatting, continuation via `previousResponseId`, and persistence enabled by default. See the [Responses docs](https://platform.openai.com/docs/guides/responses)."
 )
 @Plugin(
     examples = {
@@ -309,74 +309,80 @@ import java.util.Objects;
 public class Responses extends AbstractTask implements RunnableTask<Responses.Output> {
 
     @Schema(
-        title = "Model name to use (e.g., gpt-4o)",
-        description = "See the [OpenAI model's documentation](https://platform.openai.com/docs/models)"
+        title = "Model ID",
+        description = "Required OpenAI model (e.g., gpt-4.1 or gpt-4o); see the [model docs](https://platform.openai.com/docs/models)."
     )
     @NotNull
     private Property<String> model;
 
     @Schema(
-        title = "Input to the prompt's context window"
+        title = "Input payload",
+        description = "String or structured `input` list for the conversation; required."
     )
     @NotNull
     private Property<Object> input;
 
     @Schema(
-        title = "Text response configuration",
-        description = "Configure the format of the model's text response"
+        title = "Text response config",
+        description = "Optional map for text output settings (e.g., `json_schema` formatted responses)."
     )
     private Property<Map<String, Object>> text;
 
     @Schema(
-        title = "List of built-in tools to enable",
-        description = "e.g., web_search, file_search, function calling"
+        title = "Enabled tools",
+        description = "List of tool objects (web_search_preview, file_search, function, etc.) sent to the API."
     )
     private Property<List<Map<String, Object>>> tools;
 
     @Schema(
-        title = "Controls which tool is called by the model",
-        description = "none: no tools, auto: model picks, required: must use tools"
+        title = "Tool choice",
+        description = "NONE disables tools, AUTO (default) lets the model decide, REQUIRED forces a tool call when tools are provided."
     )
     private Property<ToolChoice> toolChoice;
 
     @Schema(
-        title = "Whether to persist response and chat history",
-        description = "If true (default), persists in OpenAI's storage"
+        title = "Persist response history",
+        description = "Defaults to true to store conversation in OpenAI; set false for ephemeral exchanges."
     )
     @NotNull
     @Builder.Default
     private Property<Boolean> store = Property.ofValue(true);
 
     @Schema(
-        title = "ID of previous response to continue conversation"
+        title = "Previous response ID",
+        description = "Continue a conversation by supplying a prior `response_id`; requires prior persistence."
     )
     private Property<String> previousResponseId;
 
     @Schema(
         title = "Reasoning configuration",
-        description = "Configuration for model reasoning process"
+        description = "Optional reasoning options map passed to the API."
     )
     private Property<Map<String, String>> reasoning;
 
     @Schema(
-        title = "Maximum tokens in the response"
+        title = "Max output tokens",
+        description = "Caps response tokens; leave unset to use OpenAI defaults."
     )
     private Property<Integer> maxOutputTokens;
 
     @Schema(
-        title = "Sampling temperature (0-2)"
+        title = "Sampling temperature (0-2)",
+        description = "Default 1.0; higher values increase randomness."
     )
     @Builder.Default
     private Property<@Max(2)Double> temperature = Property.ofValue(1.0);
 
     @Schema(
-        title = "Nucleus sampling parameter (0-1)"
+        title = "Top-p nucleus sampling (0-1)",
+        description = "Default 1.0; lower values limit candidate tokens."
     )
     @Builder.Default
     private Property<@Max(1) Double> topP = Property.ofValue(1.0);
 
     @Schema(
-        title = "Allow parallel tool execution"
+        title = "Parallel tool calls",
+        description = "Whether tools may run in parallel; uses provider default when unset."
     )
     private Property<Boolean> parallelToolCalls;
 
@@ -484,22 +490,24 @@ public class Responses extends AbstractTask implements RunnableTask<Responses.Ou
     @Getter
     public static class Output implements io.kestra.core.models.tasks.Output {
         @Schema(
-            title = "ID of the persisted response"
+            title = "Response ID"
         )
         private String responseId;
 
         @Schema(
-            title = "The generated text output"
+            title = "Generated text"
         )
         private String outputText;
 
         @Schema(
-            title = "List of sources (for web/file search)"
+            title = "Sources",
+            description = "URLs returned via web/file search annotations."
         )
         private List<String> sources;
 
         @Schema(
-            title = "Full API response for advanced use"
+            title = "Raw API response",
+            description = "Full response as a map for downstream processing."
         )
         private Map<String, Object> rawResponse;
     }
