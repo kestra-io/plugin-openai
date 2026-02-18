@@ -29,8 +29,8 @@ import java.nio.file.StandardCopyOption;
 @Getter
 @NoArgsConstructor
 @Schema(
-    title = "Upload a file to OpenAI for use with other API endpoints.",
-    description = "Allows uploading files that can be used with various OpenAI features, such as search, fine-tuning, or retrieval augmented responses."
+    title = "Upload files to OpenAI storage",
+    description = "Sends a file from Kestra internal storage to OpenAI for assistants, fine-tune, search, or other purposes, returning the upload ID. Uses a temp copy locally before upload; unknown purposes fall back to `assistants`."
 )
 @Plugin(
     examples = {
@@ -82,15 +82,16 @@ import java.nio.file.StandardCopyOption;
 public class UploadFile extends AbstractTask implements RunnableTask<UploadFile.Output> {
 
     @Schema(
-        title = "The source file URI",
-        description = "URI of the file containing data to be loaded into OpenAI"
+        title = "Source file URI",
+        description = "Required `kestra://` or other storage URI pointing to the file to upload."
     )
     @NotNull
     @PluginProperty(internalStorageURI = true)
     private Property<String> from;
 
     @Schema(
-        title = "The intended purpose of the uploaded file"
+        title = "Upload purpose",
+        description = "Accepted values include assistants, fine-tune, vision, user_data, evals, batch; defaults to assistants for unrecognized values."
     )
     @NotNull
     private Property<String> purpose;
@@ -145,7 +146,7 @@ public class UploadFile extends AbstractTask implements RunnableTask<UploadFile.
     @Getter
     public static class Output implements io.kestra.core.models.tasks.Output {
         @Schema(
-            title = "The ID of the uploaded file"
+            title = "Uploaded file ID"
         )
         private String fileId;
     }

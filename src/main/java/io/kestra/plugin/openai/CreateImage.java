@@ -35,8 +35,8 @@ import static io.kestra.core.utils.Rethrow.throwConsumer;
 @Getter
 @NoArgsConstructor
 @Schema(
-    title = "Given a prompt, create an image with OpenAI.",
-    description = "For more information, refer to the [OpenAI Image Generation API docs](https://platform.openai.com/docs/api-reference/images/create)."
+    title = "Generate images with OpenAI",
+    description = "Creates one or more images from a prompt using OpenAI Images. Default size is 1024x1024; optionally download Base64 content into Kestra internal storage or return remote URLs. See the [Images API docs](https://platform.openai.com/docs/api-reference/images/create)."
 )
 @Plugin(
     examples = {
@@ -59,26 +59,29 @@ import static io.kestra.core.utils.Rethrow.throwConsumer;
 )
 public class CreateImage extends AbstractTask implements RunnableTask<CreateImage.Output> {
     @Schema(
-        title = "Message to send to the API as prompt"
+        title = "Image prompt",
+        description = "Required text sent to the Images API."
     )
     @NotNull
     private Property<String> prompt;
 
     @Schema(
-        title = "The number of images to generate; must be between 1 and 10."
+        title = "Number of images",
+        description = "Between 1 and 10; OpenAI defaults to 1 when unset."
     )
     private Integer n;
 
     @Schema(
-        title = "The size of the generated images."
+        title = "Image size",
+        description = "Defaults to 1024x1024; choose 256x256, 512x512, or 1024x1024."
     )
     @Builder.Default
     @NotNull
     private Property<SIZE> size = Property.ofValue(SIZE.LARGE);
 
     @Schema(
-        title = "Whether to download the generated image",
-        description = "If enable, the generated image will be downloaded inside Kestra's internal storage. Else, the URL of the generated image will be available as task output."
+        title = "Download generated images",
+        description = "Default false. When true, saves Base64 output to Kestra internal storage; when false, returns image URLs."
     )
     @Builder.Default
     @NotNull
@@ -123,7 +126,8 @@ public class CreateImage extends AbstractTask implements RunnableTask<CreateImag
     public static class Output implements io.kestra.core.models.tasks.Output {
 
         @Schema(
-            title = "Generated images"
+            title = "Generated images",
+            description = "List of internal storage URIs or remote URLs depending on `download`."
         )
         private List<URI> images;
     }
