@@ -51,6 +51,61 @@ public class ResponsesTest extends AbstractOpenAITest {
     }
 
     @Test
+    @DisabledIf(
+        value = "canNotTestPromptId",
+        disabledReason = "Needs ID of an OpenAI Platform-stored Prompt without Prompt Variables"
+    )
+    void testPromptById() throws Exception {
+        RunContext runContext = runContextFactory.of();
+
+        Responses task = Responses.builder()
+            .id("test-task")
+            .type(Responses.class.getName())
+            .apiKey(Property.ofValue(getApiKey()))
+            .clientTimeout(30)
+            .model(Property.ofValue("gpt-5-nano"))
+            .promptId(Property.ofValue(getPromptIdToUpper()))
+            .input(Property.ofValue("asdf")) // not a typo: prompt by ID tells model to return uppercase of input
+            .build();
+
+        Responses.Output output = task.run(runContext);
+
+        assertNotNull(output);
+        assertNotNull(output.getResponseId());
+        assertNotNull(output.getOutputText());
+        assertThat(output.getOutputText(), containsString("ASDF"));
+        assertNotNull(output.getRawResponse());
+    }
+
+    @Test
+    @DisabledIf(
+        value = "canNotTestPromptIdVariables",
+        disabledReason = "Needs ID of an OpenAI Platform-stored Prompt with Prompt Variable 'suffix'"
+    )
+    void testPromptByIdWithVariables() throws Exception {
+        RunContext runContext = runContextFactory.of();
+
+        Responses task = Responses.builder()
+            .id("test-task")
+            .type(Responses.class.getName())
+            .apiKey(Property.ofValue(getApiKey()))
+            .clientTimeout(30)
+            .model(Property.ofValue("gpt-5-nano"))
+            .promptId(Property.ofValue(getPromptIdToUpperSuffix()))
+            .input(Property.ofValue("auto"))
+            .promptVariables(Property.ofValue(Map.of("suffix", "mation")))
+            .build();
+
+        Responses.Output output = task.run(runContext);
+
+        assertNotNull(output);
+        assertNotNull(output.getResponseId());
+        assertNotNull(output.getOutputText());
+        assertThat(output.getOutputText(), containsString("AUTOmation"));
+        assertNotNull(output.getRawResponse());
+    }
+
+    @Test
     void testWebSearchTool() throws Exception {
         RunContext runContext = runContextFactory.of();
 

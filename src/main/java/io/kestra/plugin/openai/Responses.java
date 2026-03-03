@@ -303,6 +303,39 @@ import java.util.Objects;
                             - food
                 """
 
+        ),
+        @Example(
+            full = true,
+            title = "Use a stored prompt template and MCP server with OpenAI's Responses API.",
+            code = """
+                id: prompt_id_demo
+                namespace: company.team
+
+                inputs:
+                  - id: food
+                    type: STRING
+                    defaults: Avocado
+
+                tasks:
+                  - id: generate_structured_response
+                    type: io.kestra.plugin.openai.Responses
+                    apiKey: "{{ secret('OPENAI_API_KEY') }}"
+                    model: gpt-5-mini
+                    input: "Summarize the Pull Requests assigned to me for review."
+                    promptId: "pmpt_XYZ"
+                    promptVariables:
+                      repo: "kestra-io/kestra"
+                      username: "your.name"
+                    tools:
+                      - type: mcp
+                        server_label: GitHub_MCP
+                        server_description: GitHub MCP Server
+                        server_url: "https://api.githubcopilot.com/mcp/"
+                        require_approval: never
+                        authorization: "{{ secret('GITHUB_PERSONAL_ACCESS_TOKEN') }}"
+                        headers:
+                          X-MCP-Readonly: "true"
+                """
         )
     }
 )
@@ -355,6 +388,18 @@ public class Responses extends AbstractTask implements RunnableTask<Responses.Ou
     private Property<String> previousResponseId;
 
     @Schema(
+        title = "Reference to a prompt stored in OpenAI Platform (optional)",
+        description = "If provided, the Platform-managed prompt will be used, with `input` added as a user input."
+    )
+    private Property<String> promptId;
+
+    @Schema(
+        title = "Key-value pairs for substitution in the stored prompt (optional)",
+        description = "Ignored unless `promptId` is provided. Values will replace placeholders in the stored prompt."
+    )
+    private Property<Map<String, String>> promptVariables;
+
+    @Schema(
         title = "Reasoning configuration",
         description = "Optional reasoning options map passed to the API."
     )
@@ -394,11 +439,13 @@ public class Responses extends AbstractTask implements RunnableTask<Responses.Ou
         ToolChoice renderedToolChoice = runContext.render(this.toolChoice).as(ToolChoice.class).orElse(ToolChoice.AUTO);
         Boolean renderedStore = runContext.render(store).as(Boolean.class).orElse(Boolean.TRUE);
         String renderedPreviousResponseId = runContext.render(this.previousResponseId).as(String.class).orElse(null);
+        String renderedPromptId = runContext.render(this.promptId).as(String.class).orElse(null);
         Integer maxTokens = runContext.render(this.maxOutputTokens).as(Integer.class).orElse(null);
         Double renderedTemperature = runContext.render(this.temperature).as(Double.class).orElse(1.0);
         Double renderedTopP = runContext.render(this.topP).as(Double.class).orElse(1.0);
         Boolean parallelCalls = runContext.render(this.parallelToolCalls).as(Boolean.class).orElse(null);
 
+        Map<String, String> renderedPromptVariables = runContext.render(promptVariables).asMap(String.class, String.class);
         Map<String, String> renderedReasoningMap = runContext.render(reasoning).asMap(String.class, String.class);
         Map<String, Object> renderedTextFormat = runContext.render(text).asMap(String.class, Object.class);
 
@@ -416,6 +463,17 @@ public class Responses extends AbstractTask implements RunnableTask<Responses.Ou
             .store(renderedStore)
             .temperature(renderedTemperature)
             .topP(renderedTopP);
+
+        if (renderedPromptId != null) {
+            final var promptBuilder = ResponsePrompt.builder()
+                .id(renderedPromptId);
+            if (renderedPromptVariables != null) {
+                final var renderedVariables = ParametersUtils.OBJECT_MAPPER.convertValue(renderedPromptVariables,
+                    com.openai.models.responses.ResponsePrompt.Variables.class);
+                promptBuilder.variables(renderedVariables);
+            }
+            paramsBuilder.prompt(promptBuilder.build());
+        }
 
         if (renderedTools != null && !renderedTools.isEmpty()) {
             List<Tool> sdkTools = renderedTools.stream()
