@@ -157,7 +157,7 @@ public class ResponsesTest extends AbstractOpenAITest {
         Map<String, Object> functionTool = Map.of(
             "type", "function",
             "name", "respond_to_review",
-            "description", "Analyze the sentiment of the provided text in one word",
+            "description", "Create a suggested reply to the provided customer review.",
             "strict", true,
             "parameters", toolParameters
         );
@@ -176,10 +176,10 @@ public class ResponsesTest extends AbstractOpenAITest {
 
         assertNotNull(output);
         assertNotNull(output.getOutputText());
-        assertThat(output.getOutputText(), anyOf(
-            containsStringIgnoringCase("happy"),
-            containsStringIgnoringCase("enjoy"),
-            containsStringIgnoringCase("positive")
+        assertThat(output.getOutputText(), allOf(
+            containsStringIgnoringCase("reply_later"),
+            containsStringIgnoringCase("response_urgency"),
+            containsStringIgnoringCase("response_text")
         ));
     }
 }
