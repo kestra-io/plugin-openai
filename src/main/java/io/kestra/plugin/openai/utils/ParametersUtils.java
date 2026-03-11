@@ -1,14 +1,5 @@
 package io.kestra.plugin.openai.utils;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.openai.core.JsonValue;
-import com.openai.models.responses.*;
-import io.kestra.core.exceptions.IllegalVariableEvaluationException;
-import io.kestra.core.models.property.Property;
-import io.kestra.core.runners.RunContext;
-import io.kestra.core.serializers.JacksonMapper;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
@@ -16,10 +7,20 @@ import java.net.URLConnection;
 import java.util.*;
 import java.util.stream.Collectors;
 
-import io.kestra.core.utils.FileUtils;
-import lombok.Getter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.openai.models.responses.*;
+
+import io.kestra.core.exceptions.IllegalVariableEvaluationException;
+import io.kestra.core.models.property.Property;
+import io.kestra.core.runners.RunContext;
+import io.kestra.core.serializers.JacksonMapper;
+import io.kestra.core.utils.FileUtils;
+
+import lombok.Getter;
 
 import static io.kestra.core.utils.Rethrow.throwFunction;
 
@@ -43,14 +44,18 @@ public final class ParametersUtils {
             return convertToMessages(runContext, rawList);
         }
 
-        return List.of(ResponseInputItem.Message.builder()
-            .role(ResponseInputItem.Message.Role.USER)
-            .addContent(ResponseInputContent.ofInputText(
-                ResponseInputText.builder()
-                    .text(renderedString)
-                    .build()
-            ))
-            .build());
+        return List.of(
+            ResponseInputItem.Message.builder()
+                .role(ResponseInputItem.Message.Role.USER)
+                .addContent(
+                    ResponseInputContent.ofInputText(
+                        ResponseInputText.builder()
+                            .text(renderedString)
+                            .build()
+                    )
+                )
+                .build()
+        );
     }
 
     private static List<ResponseInputItem.Message> convertToMessages(RunContext runContext, List<Map<String, Object>> renderedList) throws Exception {
@@ -60,26 +65,29 @@ public final class ParametersUtils {
         );
 
         return messages.stream()
-            .map(throwFunction(message ->
-                ResponseInputItem.Message.builder()
-                    .role(message.role())
-                    .content(
-                        message.content().stream()
-                            .map(throwFunction(content -> {
-                                if (content.inputImage().isPresent()) {
-                                    return processImageContent(runContext, content);
-                                } else if (content.inputText().isPresent()) {
-                                    return processTextContent(content);
-                                } else if (content.inputFile().isPresent()) {
-                                    return processFileContent(content);
-                                } else {
-                                    return content;
-                                }
-                            }))
-                            .collect(Collectors.toList())
-                    )
-                    .build()
-            ))
+            .map(
+                throwFunction(
+                    message -> ResponseInputItem.Message.builder()
+                        .role(message.role())
+                        .content(
+                            message.content().stream()
+                                .map(throwFunction(content ->
+                                {
+                                    if (content.inputImage().isPresent()) {
+                                        return processImageContent(runContext, content);
+                                    } else if (content.inputText().isPresent()) {
+                                        return processTextContent(content);
+                                    } else if (content.inputFile().isPresent()) {
+                                        return processFileContent(content);
+                                    } else {
+                                        return content;
+                                    }
+                                }))
+                                .collect(Collectors.toList())
+                        )
+                        .build()
+                )
+            )
             .collect(Collectors.toList());
     }
 
@@ -125,7 +133,8 @@ public final class ParametersUtils {
                     ResponseInputImage.builder()
                         .imageUrl(renderedUrl)
                         .detail(detail)
-                        .build());
+                        .build()
+                );
             }
 
             if (!image._additionalProperties().isEmpty() && !image._additionalProperties().get("mimeType").isMissing()) {
@@ -138,16 +147,18 @@ public final class ParametersUtils {
                 throw new IllegalArgumentException(
                     "Unsupported or unknown MIME type '" + mimeType + "' for file '" + filename + "'. " +
                         "You must provide a valid 'mimeType' as an additional property along with your `image_url` if using internal files like .upl or .tmp." +
-                        "For more details on supported mime types, see: [OpenAI's Image Input Requirements](https://platform.openai.com/docs/guides/images-vision#image-input-requirements.)");
+                        "For more details on supported mime types, see: [OpenAI's Image Input Requirements](https://platform.openai.com/docs/guides/images-vision#image-input-requirements.)"
+                );
             }
 
-            processedUrl = convertKestraUrlToBase64(runContext, renderedUrl,mimeType);
+            processedUrl = convertKestraUrlToBase64(runContext, renderedUrl, mimeType);
 
             return ResponseInputContent.ofInputImage(
                 ResponseInputImage.builder()
                     .imageUrl(processedUrl)
                     .detail(detail)
-                    .build());
+                    .build()
+            );
         }
         return content;
     }
@@ -198,7 +209,8 @@ public final class ParametersUtils {
      * @return Extracted text or null
      */
     private static String extractFromItem(ResponseOutputItem item) {
-        if (item == null) return null;
+        if (item == null)
+            return null;
 
         if (item.functionCall().isPresent()) {
             return item.functionCall().get().arguments();
@@ -218,6 +230,7 @@ public final class ParametersUtils {
         WEBP("image/webp"),
         GIF("image/gif"),
         JPG("image/jpg");
+
         private final String mime;
 
         SupportedMimeType(String mime) {

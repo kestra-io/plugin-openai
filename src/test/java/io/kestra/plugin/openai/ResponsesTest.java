@@ -1,17 +1,20 @@
 package io.kestra.plugin.openai;
 
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.DisabledIf;
+
 import com.openai.core.JsonValue;
+
 import io.kestra.core.junit.annotations.KestraTest;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.runners.RunContext;
 import io.kestra.core.runners.RunContextFactory;
-import jakarta.inject.Inject;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.condition.DisabledIf;
 
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
+import jakarta.inject.Inject;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
@@ -39,7 +42,6 @@ public class ResponsesTest extends AbstractOpenAITest {
             .model(Property.ofValue("gpt-4.1"))
             .input(Property.ofValue("Explain what Kestra is in one sentence."))
             .build();
-
 
         Responses.Output output = task.run(runContext);
 
@@ -111,8 +113,8 @@ public class ResponsesTest extends AbstractOpenAITest {
 
         Map<String, Object> webSearchTool = Map.of(
             "type", "web_search_preview",
-             "search_context_size", "low",
-             "user_location", Map.of("type", "approximate", "city", "Berlin", "region", "Berlin", "country", "DE")
+            "search_context_size", "low",
+            "user_location", Map.of("type", "approximate", "city", "Berlin", "region", "Berlin", "country", "DE")
         );
 
         Responses task = Responses.builder()
@@ -140,17 +142,19 @@ public class ResponsesTest extends AbstractOpenAITest {
         Map<String, JsonValue> toolParameters = Map.of(
             "type", JsonValue.from("object"),
             "required", JsonValue.from(List.of("response_urgency", "response_text")),
-            "properties", JsonValue.from(Map.of(
-                "response_urgency", Map.of(
-                    "type", "string",
-                    "description", "How urgently this customer review needs a reply. Bad reviews must be addressed immediately before anyone sees them. Good reviews can wait until later.",
-                    "enum", List.of("reply_immediately", "reply_later")
-                ),
-                "response_text", Map.of(
-                    "type", "string",
-                    "description", "The text to post online in response to this review."
+            "properties", JsonValue.from(
+                Map.of(
+                    "response_urgency", Map.of(
+                        "type", "string",
+                        "description", "How urgently this customer review needs a reply. Bad reviews must be addressed immediately before anyone sees them. Good reviews can wait until later.",
+                        "enum", List.of("reply_immediately", "reply_later")
+                    ),
+                    "response_text", Map.of(
+                        "type", "string",
+                        "description", "The text to post online in response to this review."
+                    )
                 )
-            )),
+            ),
             "additionalProperties", JsonValue.from(false)
         );
 
@@ -176,10 +180,12 @@ public class ResponsesTest extends AbstractOpenAITest {
 
         assertNotNull(output);
         assertNotNull(output.getOutputText());
-        assertThat(output.getOutputText(), allOf(
-            containsStringIgnoringCase("reply_later"),
-            containsStringIgnoringCase("response_urgency"),
-            containsStringIgnoringCase("response_text")
-        ));
+        assertThat(
+            output.getOutputText(), allOf(
+                containsStringIgnoringCase("reply_later"),
+                containsStringIgnoringCase("response_urgency"),
+                containsStringIgnoringCase("response_text")
+            )
+        );
     }
 }

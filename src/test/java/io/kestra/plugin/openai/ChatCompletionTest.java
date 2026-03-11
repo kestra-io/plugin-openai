@@ -1,16 +1,16 @@
 package io.kestra.plugin.openai;
 
-import com.openai.models.chat.completions.ChatCompletionMessageFunctionToolCall;
-import com.openai.models.chat.completions.ChatCompletionMessageToolCall;
+import java.util.List;
+
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.DisabledIf;
+
 import io.kestra.core.junit.annotations.KestraTest;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.runners.RunContext;
 import io.kestra.core.runners.RunContextFactory;
-import jakarta.inject.Inject;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.condition.DisabledIf;
 
-import java.util.List;
+import jakarta.inject.Inject;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
@@ -185,8 +185,8 @@ class ChatCompletionTest extends AbstractOpenAITest {
 
         ChatCompletion.Output runOutput = task.run(runContext);
         var functionCall = runOutput.getChoices().getFirst().message()
-                .toolCalls().orElse(List.of())
-                .getFirst().asFunction().function();
+            .toolCalls().orElse(List.of())
+            .getFirst().asFunction().function();
 
         assertThat(functionCall.name(), containsString("record_customer_rating"));
         assertThat(functionCall._arguments().asString().orElse(""), containsString("terrible"));

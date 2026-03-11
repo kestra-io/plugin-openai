@@ -1,16 +1,5 @@
 package io.kestra.plugin.openai;
 
-import io.kestra.core.models.property.Property;
-import io.kestra.core.runners.RunContext;
-import io.kestra.core.runners.RunContextFactory;
-import io.kestra.core.junit.annotations.KestraTest;
-import io.kestra.core.storages.StorageInterface;
-import io.kestra.core.tenant.TenantService;
-import io.kestra.core.utils.IdUtils;
-import jakarta.inject.Inject;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.condition.DisabledIf;
-
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -18,9 +7,21 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Objects;
 
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.DisabledIf;
+
+import io.kestra.core.junit.annotations.KestraTest;
+import io.kestra.core.models.property.Property;
+import io.kestra.core.runners.RunContext;
+import io.kestra.core.runners.RunContextFactory;
+import io.kestra.core.storages.StorageInterface;
+import io.kestra.core.tenant.TenantService;
+import io.kestra.core.utils.IdUtils;
+
+import jakarta.inject.Inject;
+
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.notNullValue;
-
 
 @KestraTest
 @DisabledIf(
@@ -61,8 +62,12 @@ class UploadFileTest extends AbstractOpenAITest {
     }
 
     protected static File file() throws URISyntaxException {
-        return new File(Objects.requireNonNull(AbstractTask.class.getClassLoader()
-                .getResource("application.yml"))
-            .toURI());
+        return new File(
+            Objects.requireNonNull(
+                AbstractTask.class.getClassLoader()
+                    .getResource("application.yml")
+            )
+                .toURI()
+        );
     }
 }

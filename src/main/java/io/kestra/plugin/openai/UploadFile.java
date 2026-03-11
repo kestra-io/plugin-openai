@@ -1,9 +1,17 @@
 package io.kestra.plugin.openai;
 
+import java.io.*;
+import java.net.URI;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
+
+import org.slf4j.Logger;
+
 import com.openai.client.OpenAIClient;
 import com.openai.models.files.FilePurpose;
 import com.openai.models.uploads.Upload;
 import com.openai.models.uploads.UploadCreateParams;
+
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.annotations.PluginProperty;
@@ -11,17 +19,11 @@ import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
 import io.kestra.core.utils.FileUtils;
+
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.NotNull;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
-
-import jakarta.validation.constraints.NotNull;
-import org.slf4j.Logger;
-
-import java.io.*;
-import java.net.URI;
-import java.nio.file.Files;
-import java.nio.file.StandardCopyOption;
 
 @SuperBuilder
 @ToString
@@ -112,7 +114,7 @@ public class UploadFile extends AbstractTask implements RunnableTask<UploadFile.
 
         Files.copy(runContext.storage().getFile(from), tempFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
 
-        Upload fileObject = client.uploads().create(buildUploadCreateParams(purpose,tempFile.getPath()));
+        Upload fileObject = client.uploads().create(buildUploadCreateParams(purpose, tempFile.getPath()));
 
         return Output.builder().fileId(fileObject.id()).build();
     }
@@ -121,13 +123,15 @@ public class UploadFile extends AbstractTask implements RunnableTask<UploadFile.
         java.io.File file = new java.io.File(filepath);
         String mimeType = Files.probeContentType(file.toPath());
         return UploadCreateParams.builder()
-                .body(UploadCreateParams.Body.builder()
-                .filename(file.getName())
-                .purpose(getFilePurpose(purpose))
-                .mimeType(mimeType)
-                .bytes(file.length())
-                .build())
-                .build();
+            .body(
+                UploadCreateParams.Body.builder()
+                    .filename(file.getName())
+                    .purpose(getFilePurpose(purpose))
+                    .mimeType(mimeType)
+                    .bytes(file.length())
+                    .build()
+            )
+            .build();
     }
 
     private static FilePurpose getFilePurpose(final String purpose) {

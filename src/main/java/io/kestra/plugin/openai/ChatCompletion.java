@@ -1,11 +1,15 @@
 package io.kestra.plugin.openai;
 
+import java.io.IOException;
+import java.util.*;
+
 import com.openai.client.OpenAIClient;
 import com.openai.core.JsonValue;
 import com.openai.models.FunctionDefinition;
 import com.openai.models.ResponseFormatJsonSchema;
 import com.openai.models.chat.completions.*;
 import com.openai.models.completions.CompletionUsage;
+
 import io.kestra.core.exceptions.IllegalVariableEvaluationException;
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
@@ -14,13 +18,11 @@ import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
 import io.kestra.core.serializers.JacksonMapper;
+
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
-
-import java.io.IOException;
-import java.util.*;
 
 @SuperBuilder
 @ToString
@@ -247,9 +249,13 @@ public class ChatCompletion extends AbstractTask implements RunnableTask<ChatCom
             chatFunctions = new ArrayList<>();
             for (PluginChatFunction function : runContext.render(functions).asList(PluginChatFunction.class)) {
                 if (function.parameters != null) {
-                    chatFunctions.add(ChatCompletionTool.ofFunction(ChatCompletionFunctionTool.builder()
-                        .function(toFunctionDefinition(runContext, function))
-                        .build()));
+                    chatFunctions.add(
+                        ChatCompletionTool.ofFunction(
+                            ChatCompletionFunctionTool.builder()
+                                .function(toFunctionDefinition(runContext, function))
+                                .build()
+                        )
+                    );
                 }
             }
         }
@@ -290,11 +296,13 @@ public class ChatCompletion extends AbstractTask implements RunnableTask<ChatCom
                     throw new IllegalArgumentException("Requested function '" + renderedFunctionCall + "' for `functionCall` is not provided in `functions` list.");
                 }
 
-                builder.toolChoice(ChatCompletionToolChoiceOption.ofNamedToolChoice(
-                    ChatCompletionNamedToolChoice.builder()
-                        .function(ChatCompletionNamedToolChoice.Function.builder().name(renderedFunctionCall).build())
-                        .build()
-                ));
+                builder.toolChoice(
+                    ChatCompletionToolChoiceOption.ofNamedToolChoice(
+                        ChatCompletionNamedToolChoice.builder()
+                            .function(ChatCompletionNamedToolChoice.Function.builder().name(renderedFunctionCall).build())
+                            .build()
+                    )
+                );
             }
         } else {
             if (renderedFunctionCall.equalsIgnoreCase("none")) {
@@ -474,7 +482,9 @@ public class ChatCompletion extends AbstractTask implements RunnableTask<ChatCom
     }
 
     private enum Role {
-        ASSISTANT, SYSTEM, USER;
+        ASSISTANT,
+        SYSTEM,
+        USER;
 
         private static Role fromString(final String role) {
             return switch (role.toLowerCase()) {

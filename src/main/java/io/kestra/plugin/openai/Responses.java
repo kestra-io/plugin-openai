@@ -1,27 +1,27 @@
 package io.kestra.plugin.openai;
 
-import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Objects;
+
 import com.openai.client.OpenAIClient;
 import com.openai.models.responses.*;
+
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
-import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.executions.metrics.Counter;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
 import io.kestra.core.serializers.JacksonMapper;
 import io.kestra.plugin.openai.utils.ParametersUtils;
+
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
-
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Objects;
 
 @SuperBuilder
 @ToString
@@ -416,7 +416,7 @@ public class Responses extends AbstractTask implements RunnableTask<Responses.Ou
         description = "Default 1.0; higher values increase randomness."
     )
     @Builder.Default
-    private Property<@Max(2)Double> temperature = Property.ofValue(1.0);
+    private Property<@Max(2) Double> temperature = Property.ofValue(1.0);
 
     @Schema(
         title = "Top-p nucleus sampling (0-1)",
@@ -468,8 +468,10 @@ public class Responses extends AbstractTask implements RunnableTask<Responses.Ou
             final var promptBuilder = ResponsePrompt.builder()
                 .id(renderedPromptId);
             if (renderedPromptVariables != null) {
-                final var renderedVariables = ParametersUtils.OBJECT_MAPPER.convertValue(renderedPromptVariables,
-                    com.openai.models.responses.ResponsePrompt.Variables.class);
+                final var renderedVariables = ParametersUtils.OBJECT_MAPPER.convertValue(
+                    renderedPromptVariables,
+                    com.openai.models.responses.ResponsePrompt.Variables.class
+                );
                 promptBuilder.variables(renderedVariables);
             }
             paramsBuilder.prompt(promptBuilder.build());
@@ -490,8 +492,10 @@ public class Responses extends AbstractTask implements RunnableTask<Responses.Ou
         }
 
         if (renderedReasoningMap != null) {
-            com.openai.models.Reasoning renderedReasoning = ParametersUtils.OBJECT_MAPPER.convertValue(renderedReasoningMap,
-                com.openai.models.Reasoning.class);
+            com.openai.models.Reasoning renderedReasoning = ParametersUtils.OBJECT_MAPPER.convertValue(
+                renderedReasoningMap,
+                com.openai.models.Reasoning.class
+            );
             paramsBuilder.reasoning(renderedReasoning);
         }
 
