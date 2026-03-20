@@ -222,8 +222,8 @@ public class ChatCompletion extends AbstractTask implements RunnableTask<ChatCom
     @Schema(
         title = "Enable prompt caching",
         description = """
-            When true, enables OpenAI prompt caching to reduce latency and cost for \
-            repeated prefixes. See the \
+            When true, enables OpenAI prompt caching to reduce latency and cost for
+            repeated prefixes. See the
             [prompt caching docs](https://platform.openai.com/docs/guides/prompt-caching)."""
     )
     private Property<Boolean> promptCaching;
