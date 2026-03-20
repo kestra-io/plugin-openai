@@ -431,6 +431,15 @@ public class Responses extends AbstractTask implements RunnableTask<Responses.Ou
     )
     private Property<Boolean> parallelToolCalls;
 
+    @Schema(
+        title = "Enable prompt caching",
+        description = """
+            When true, enables OpenAI prompt caching to reduce latency and cost for \
+            repeated prefixes. See the \
+            [prompt caching docs](https://platform.openai.com/docs/guides/prompt-caching)."""
+    )
+    private Property<Boolean> promptCaching;
+
     @Override
     public Output run(RunContext runContext) throws Exception {
         OpenAIClient client = this.openAIClient(runContext);
@@ -512,14 +521,21 @@ public class Responses extends AbstractTask implements RunnableTask<Responses.Ou
             paramsBuilder.text(textFormat);
         }
 
+        var rPromptCaching = runContext.render(this.promptCaching).as(Boolean.class).orElse(false);
+        if (Boolean.TRUE.equals(rPromptCaching)) {
+            paramsBuilder.promptCacheRetention(ResponseCreateParams.PromptCacheRetention._24H);
+        }
+
         ResponseCreateParams params = paramsBuilder.build();
 
         Response outputResponse = client.responses().create(params);
 
         if (outputResponse.usage().isPresent()) {
-            runContext.metric(Counter.of("usage.prompt.tokens", outputResponse.usage().get().inputTokens()));
-            runContext.metric(Counter.of("usage.completion.tokens", outputResponse.usage().get().outputTokens()));
-            runContext.metric(Counter.of("usage.total.tokens", outputResponse.usage().get().totalTokens()));
+            var usage = outputResponse.usage().get();
+            runContext.metric(Counter.of("usage.prompt.tokens", usage.inputTokens()));
+            runContext.metric(Counter.of("usage.completion.tokens", usage.outputTokens()));
+            runContext.metric(Counter.of("usage.total.tokens", usage.totalTokens()));
+            runContext.metric(Counter.of("usage.prompt.cached_tokens", usage.inputTokensDetails().cachedTokens()));
         }
 
         List<String> sources = outputResponse.output().stream()
