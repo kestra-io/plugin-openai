@@ -219,6 +219,15 @@ public class ChatCompletion extends AbstractTask implements RunnableTask<ChatCom
     )
     private Property<String> jsonResponseSchema;
 
+    @Schema(
+        title = "Enable prompt caching",
+        description = """
+            When true, enables OpenAI prompt caching to reduce latency and cost for
+            repeated prefixes. See the
+            [prompt caching docs](https://platform.openai.com/docs/guides/prompt-caching)."""
+    )
+    private Property<Boolean> promptCaching;
+
     @Override
     public ChatCompletion.Output run(RunContext runContext) throws Exception {
         OpenAIClient client = this.openAIClient(runContext);
@@ -272,6 +281,11 @@ public class ChatCompletion extends AbstractTask implements RunnableTask<ChatCom
 
         if (rJsonResponseSchema != null) {
             builder.responseFormat(buildOpenAIResponseFormat(rJsonResponseSchema));
+        }
+
+        var rPromptCaching = runContext.render(this.promptCaching).as(Boolean.class).orElse(false);
+        if (Boolean.TRUE.equals(rPromptCaching)) {
+            builder.promptCacheRetention(ChatCompletionCreateParams.PromptCacheRetention._24H);
         }
 
         String renderedFunctionCall = this.functionCall != null ? runContext.render(this.functionCall).as(String.class).orElse("auto") : "auto";
@@ -333,9 +347,13 @@ public class ChatCompletion extends AbstractTask implements RunnableTask<ChatCom
             .create(chatCompletionCreateParams);
 
         if (chatCompletionResult.usage().isPresent()) {
-            runContext.metric(Counter.of("usage.prompt.tokens", chatCompletionResult.usage().get().promptTokens()));
-            runContext.metric(Counter.of("usage.completion.tokens", chatCompletionResult.usage().get().completionTokens()));
-            runContext.metric(Counter.of("usage.total.tokens", chatCompletionResult.usage().get().totalTokens()));
+            var usage = chatCompletionResult.usage().get();
+            runContext.metric(Counter.of("usage.prompt.tokens", usage.promptTokens()));
+            runContext.metric(Counter.of("usage.completion.tokens", usage.completionTokens()));
+            runContext.metric(Counter.of("usage.total.tokens", usage.totalTokens()));
+            usage.promptTokensDetails()
+                .flatMap(CompletionUsage.PromptTokensDetails::cachedTokens)
+                .ifPresent(cached -> runContext.metric(Counter.of("usage.prompt.cached_tokens", cached)));
         }
         return ChatCompletion.Output.builder()
             .id(chatCompletionResult.id())
