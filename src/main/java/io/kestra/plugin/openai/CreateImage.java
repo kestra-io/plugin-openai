@@ -31,6 +31,7 @@ import lombok.ToString;
 import lombok.experimental.SuperBuilder;
 
 import static io.kestra.core.utils.Rethrow.throwConsumer;
+import io.kestra.core.models.annotations.PluginProperty;
 
 @SuperBuilder
 @ToString
@@ -66,12 +67,14 @@ public class CreateImage extends AbstractTask implements RunnableTask<CreateImag
         description = "Required text sent to the Images API."
     )
     @NotNull
+    @PluginProperty(group = "main")
     private Property<String> prompt;
 
     @Schema(
         title = "Number of images",
         description = "Between 1 and 10; OpenAI defaults to 1 when unset."
     )
+    @PluginProperty(group = "advanced")
     private Integer n;
 
     @Schema(
@@ -80,6 +83,7 @@ public class CreateImage extends AbstractTask implements RunnableTask<CreateImag
     )
     @Builder.Default
     @NotNull
+    @PluginProperty(group = "advanced")
     private Property<SIZE> size = Property.ofValue(SIZE.LARGE);
 
     @Schema(
@@ -88,6 +92,7 @@ public class CreateImage extends AbstractTask implements RunnableTask<CreateImag
     )
     @Builder.Default
     @NotNull
+    @PluginProperty(group = "advanced")
     private Property<Boolean> download = Property.ofValue(Boolean.FALSE);
 
     @Override

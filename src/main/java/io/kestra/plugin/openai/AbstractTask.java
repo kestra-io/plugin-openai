@@ -16,6 +16,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
 import lombok.experimental.SuperBuilder;
+import io.kestra.core.models.annotations.PluginProperty;
 
 @SuperBuilder
 @ToString
@@ -27,6 +28,7 @@ public abstract class AbstractTask extends Task implements OpenAiInterface {
         title = "OpenAI API key"
     )
     @NotNull
+    @PluginProperty(group = "main")
     private Property<String> apiKey;
 
     protected Property<String> user;
