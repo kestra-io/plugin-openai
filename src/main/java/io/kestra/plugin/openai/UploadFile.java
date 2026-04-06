@@ -88,7 +88,7 @@ public class UploadFile extends AbstractTask implements RunnableTask<UploadFile.
         description = "Required `kestra://` or other storage URI pointing to the file to upload."
     )
     @NotNull
-    @PluginProperty(internalStorageURI = true)
+    @PluginProperty(internalStorageURI = true, group = "main")
     private Property<String> from;
 
     @Schema(
@@ -96,6 +96,7 @@ public class UploadFile extends AbstractTask implements RunnableTask<UploadFile.
         description = "Accepted values include assistants, fine-tune, vision, user_data, evals, batch; defaults to assistants for unrecognized values."
     )
     @NotNull
+    @PluginProperty(group = "main")
     private Property<String> purpose;
 
     @Override

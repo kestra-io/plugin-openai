@@ -23,6 +23,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
+import io.kestra.core.models.annotations.PluginProperty;
 
 @SuperBuilder
 @ToString
@@ -134,12 +135,14 @@ public class ChatCompletion extends AbstractTask implements RunnableTask<ChatCom
         title = "Messages to send to the model",
         description = "Required when `prompt` is absent; each entry keeps its role and content."
     )
+    @PluginProperty(group = "advanced")
     private Property<List<ChatMessage>> messages;
 
     @Schema(
         title = "Functions exposed as tools",
         description = "Define tool-callable functions with names, descriptions, and parameters; ignored if none provided."
     )
+    @PluginProperty(group = "advanced")
     private Property<List<PluginChatFunction>> functions;
 
     @Schema(
@@ -147,12 +150,14 @@ public class ChatCompletion extends AbstractTask implements RunnableTask<ChatCom
         description = "Use 'auto' (default), 'none', or a specific function name present in `functions`; other names raise an error."
     )
     @Builder.Default
+    @PluginProperty(group = "advanced")
     private Property<String> functionCall = Property.ofValue("auto");
 
     @Schema(
         title = "Prompt text to send",
         description = "Sent as a `user` message when `messages` are omitted; required if `messages` is not set."
     )
+    @PluginProperty(group = "main")
     private Property<String> prompt;
 
     @Schema(
@@ -160,6 +165,7 @@ public class ChatCompletion extends AbstractTask implements RunnableTask<ChatCom
         description = "Default 1.0; higher values increase randomness."
     )
     @Builder.Default
+    @PluginProperty(group = "advanced")
     private Property<Double> temperature = Property.ofValue(1.0);
 
     @Schema(
@@ -167,6 +173,7 @@ public class ChatCompletion extends AbstractTask implements RunnableTask<ChatCom
         description = "Default 1.0; lower values limit token candidates."
     )
     @Builder.Default
+    @PluginProperty(group = "destination")
     private Property<Double> topP = Property.ofValue(1.0);
 
     @Schema(
@@ -174,36 +181,42 @@ public class ChatCompletion extends AbstractTask implements RunnableTask<ChatCom
         description = "Default 1; controls size of `choices` list."
     )
     @Builder.Default
+    @PluginProperty(group = "advanced")
     private Property<Integer> n = Property.ofValue(1);
 
     @Schema(
         title = "Stop sequences",
         description = "Up to 4 strings; default is none."
     )
+    @PluginProperty(group = "destination")
     private Property<List<String>> stop;
 
     @Schema(
         title = "Max completion tokens",
         description = "Leave null to rely on model defaults; counts only completion tokens."
     )
+    @PluginProperty(group = "connection")
     private Property<Long> maxTokens;
 
     @Schema(
         title = "Presence penalty (-2 to 2)",
         description = "Default 0; positive values discourage repeating earlier topics."
     )
+    @PluginProperty(group = "advanced")
     private Property<Double> presencePenalty;
 
     @Schema(
         title = "Frequency penalty (-2 to 2)",
         description = "Default 0; positive values reduce reuse of frequent tokens."
     )
+    @PluginProperty(group = "advanced")
     private Property<Double> frequencyPenalty;
 
     @Schema(
         title = "Token logit bias",
         description = "Map token IDs to bias values; empty when unset."
     )
+    @PluginProperty(group = "advanced")
     private Property<Map<String, Integer>> logitBias;
 
     @Schema(
@@ -211,12 +224,14 @@ public class ChatCompletion extends AbstractTask implements RunnableTask<ChatCom
         description = "Required OpenAI model identifier (e.g., `gpt-4o`); see the [model docs](https://platform.openai.com/docs/models/overview)."
     )
     @NotNull
+    @PluginProperty(group = "main")
     private Property<String> model;
 
     @Schema(
         title = "JSON response schema",
         description = "Stringified JSON Schema enabling `response_format` = `json_schema`; uses name `kestra_schema` with `strict` true."
     )
+    @PluginProperty(group = "connection")
     private Property<String> jsonResponseSchema;
 
     @Schema(

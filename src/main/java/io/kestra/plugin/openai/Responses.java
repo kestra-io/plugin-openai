@@ -22,6 +22,7 @@ import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
+import io.kestra.core.models.annotations.PluginProperty;
 
 @SuperBuilder
 @ToString
@@ -346,6 +347,7 @@ public class Responses extends AbstractTask implements RunnableTask<Responses.Ou
         description = "Required OpenAI model (e.g., gpt-4.1 or gpt-4o); see the [model docs](https://platform.openai.com/docs/models)."
     )
     @NotNull
+    @PluginProperty(group = "main")
     private Property<String> model;
 
     @Schema(
@@ -353,24 +355,28 @@ public class Responses extends AbstractTask implements RunnableTask<Responses.Ou
         description = "String or structured `input` list for the conversation; required."
     )
     @NotNull
+    @PluginProperty(group = "main")
     private Property<Object> input;
 
     @Schema(
         title = "Text response config",
         description = "Optional map for text output settings (e.g., `json_schema` formatted responses)."
     )
+    @PluginProperty(group = "advanced")
     private Property<Map<String, Object>> text;
 
     @Schema(
         title = "Enabled tools",
         description = "List of tool objects (web_search_preview, file_search, function, etc.) sent to the API."
     )
+    @PluginProperty(group = "destination")
     private Property<List<Map<String, Object>>> tools;
 
     @Schema(
         title = "Tool choice",
         description = "NONE disables tools, AUTO (default) lets the model decide, REQUIRED forces a tool call when tools are provided."
     )
+    @PluginProperty(group = "destination")
     private Property<ToolChoice> toolChoice;
 
     @Schema(
@@ -379,12 +385,14 @@ public class Responses extends AbstractTask implements RunnableTask<Responses.Ou
     )
     @NotNull
     @Builder.Default
+    @PluginProperty(group = "destination")
     private Property<Boolean> store = Property.ofValue(true);
 
     @Schema(
         title = "Previous response ID",
         description = "Continue a conversation by supplying a prior `response_id`; requires prior persistence."
     )
+    @PluginProperty(group = "advanced")
     private Property<String> previousResponseId;
 
     @Schema(
@@ -403,12 +411,14 @@ public class Responses extends AbstractTask implements RunnableTask<Responses.Ou
         title = "Reasoning configuration",
         description = "Optional reasoning options map passed to the API."
     )
+    @PluginProperty(group = "advanced")
     private Property<Map<String, String>> reasoning;
 
     @Schema(
         title = "Max output tokens",
         description = "Caps response tokens; leave unset to use OpenAI defaults."
     )
+    @PluginProperty(group = "connection")
     private Property<Integer> maxOutputTokens;
 
     @Schema(
@@ -429,6 +439,7 @@ public class Responses extends AbstractTask implements RunnableTask<Responses.Ou
         title = "Parallel tool calls",
         description = "Whether tools may run in parallel; uses provider default when unset."
     )
+    @PluginProperty(group = "execution")
     private Property<Boolean> parallelToolCalls;
 
     @Schema(
