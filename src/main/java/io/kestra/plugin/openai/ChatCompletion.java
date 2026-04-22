@@ -96,7 +96,7 @@ import io.kestra.core.models.annotations.PluginProperty;
                 tasks:
                   - id: prioritize_response
                     type: io.kestra.plugin.openai.ChatCompletion
-                    apiKey: "yourOpenAIapiKey"
+                    apiKey: "{{ secret('OPENAI_API_KEY') }}"
                     model: gpt-4o
                     messages:
                       - role: user
@@ -195,7 +195,7 @@ public class ChatCompletion extends AbstractTask implements RunnableTask<ChatCom
         title = "Max completion tokens",
         description = "Leave null to rely on model defaults; counts only completion tokens."
     )
-    @PluginProperty(group = "connection")
+    @PluginProperty(secret = true, group = "connection")
     private Property<Long> maxTokens;
 
     @Schema(
