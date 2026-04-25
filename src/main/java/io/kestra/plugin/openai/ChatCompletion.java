@@ -195,7 +195,7 @@ public class ChatCompletion extends AbstractTask implements RunnableTask<ChatCom
         title = "Max completion tokens",
         description = "Leave null to rely on model defaults; counts only completion tokens."
     )
-    @PluginProperty(secret = true, group = "connection")
+    @PluginProperty(group = "connection")
     private Property<Long> maxTokens;
 
     @Schema(

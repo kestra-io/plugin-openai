@@ -418,7 +418,7 @@ public class Responses extends AbstractTask implements RunnableTask<Responses.Ou
         title = "Max output tokens",
         description = "Caps response tokens; leave unset to use OpenAI defaults."
     )
-    @PluginProperty(secret = true, group = "connection")
+    @PluginProperty(group = "connection")
     private Property<Integer> maxOutputTokens;
 
     @Schema(
