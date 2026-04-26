@@ -28,7 +28,7 @@ public abstract class AbstractTask extends Task implements OpenAiInterface {
         title = "OpenAI API key"
     )
     @NotNull
-    @PluginProperty(group = "main")
+    @PluginProperty(secret = true, group = "main")
     private Property<String> apiKey;
 
     protected Property<String> user;

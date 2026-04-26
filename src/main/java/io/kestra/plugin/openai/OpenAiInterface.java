@@ -11,7 +11,7 @@ public interface OpenAiInterface {
         title = "The OpenAI API key"
     )
     @NotNull
-    @PluginProperty(group = "main")
+    @PluginProperty(secret = true, group = "main")
     Property<String> getApiKey();
 
     @Schema(

@@ -96,7 +96,7 @@ import io.kestra.core.models.annotations.PluginProperty;
                 tasks:
                   - id: prioritize_response
                     type: io.kestra.plugin.openai.ChatCompletion
-                    apiKey: "yourOpenAIapiKey"
+                    apiKey: "{{ secret('OPENAI_API_KEY') }}"
                     model: gpt-4o
                     messages:
                       - role: user
