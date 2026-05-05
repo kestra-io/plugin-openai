@@ -430,10 +430,9 @@ public class Responses extends AbstractTask implements RunnableTask<Responses.Ou
 
     @Schema(
         title = "Top-p nucleus sampling (0-1)",
-        description = "Default 1.0; lower values limit candidate tokens."
+        description = "Lower values limit candidate tokens. Omit to let OpenAI apply its server-side default. Must be omitted for reasoning models (e.g., gpt-5.2+, gpt-5.4) which reject `top_p`."
     )
-    @Builder.Default
-    private Property<@Max(1) Double> topP = Property.ofValue(1.0);
+    private Property<@Max(1) Double> topP;
 
     @Schema(
         title = "Parallel tool calls",
@@ -462,7 +461,7 @@ public class Responses extends AbstractTask implements RunnableTask<Responses.Ou
         String renderedPromptId = runContext.render(this.promptId).as(String.class).orElse(null);
         Integer maxTokens = runContext.render(this.maxOutputTokens).as(Integer.class).orElse(null);
         Double renderedTemperature = runContext.render(this.temperature).as(Double.class).orElse(1.0);
-        Double renderedTopP = runContext.render(this.topP).as(Double.class).orElse(1.0);
+        Double renderedTopP = runContext.render(this.topP).as(Double.class).orElse(null);
         Boolean parallelCalls = runContext.render(this.parallelToolCalls).as(Boolean.class).orElse(null);
 
         Map<String, String> renderedPromptVariables = runContext.render(promptVariables).asMap(String.class, String.class);
@@ -481,8 +480,11 @@ public class Responses extends AbstractTask implements RunnableTask<Responses.Ou
             .input(modelInput)
             .model(modelName)
             .store(renderedStore)
-            .temperature(renderedTemperature)
-            .topP(renderedTopP);
+            .temperature(renderedTemperature);
+
+        if (renderedTopP != null) {
+            paramsBuilder.topP(renderedTopP);
+        }
 
         if (renderedPromptId != null) {
             final var promptBuilder = ResponsePrompt.builder()

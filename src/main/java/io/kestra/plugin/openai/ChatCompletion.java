@@ -170,11 +170,10 @@ public class ChatCompletion extends AbstractTask implements RunnableTask<ChatCom
 
     @Schema(
         title = "Nucleus sampling top_p",
-        description = "Default 1.0; lower values limit token candidates."
+        description = "Lower values limit token candidates. Omit to let OpenAI apply its server-side default. Must be omitted for reasoning models (e.g., gpt-5.2+, gpt-5.4) which reject `top_p`."
     )
-    @Builder.Default
     @PluginProperty(group = "destination")
-    private Property<Double> topP = Property.ofValue(1.0);
+    private Property<Double> topP;
 
     @Schema(
         title = "Number of choices",
@@ -288,11 +287,15 @@ public class ChatCompletion extends AbstractTask implements RunnableTask<ChatCom
             .messages(messages)
             .model(model)
             .temperature(this.temperature == null ? null : runContext.render(this.temperature).as(Double.class).orElse(1.0))
-            .topP(this.topP == null ? null : runContext.render(this.topP).as(Double.class).orElse(1.0))
             .n(runContext.render(this.n).as(Integer.class).orElse(1))
             .maxCompletionTokens(this.maxTokens == null ? null : runContext.render(this.maxTokens).as(Long.class).orElseThrow())
             .presencePenalty(this.presencePenalty == null ? null : runContext.render(this.presencePenalty).as(Double.class).orElseThrow())
             .frequencyPenalty(this.frequencyPenalty == null ? null : runContext.render(this.frequencyPenalty).as(Double.class).orElseThrow());
+
+        Double rTopP = this.topP == null ? null : runContext.render(this.topP).as(Double.class).orElse(null);
+        if (rTopP != null) {
+            builder.topP(rTopP);
+        }
 
         if (rJsonResponseSchema != null) {
             builder.responseFormat(buildOpenAIResponseFormat(rJsonResponseSchema));
