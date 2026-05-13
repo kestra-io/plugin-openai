@@ -47,7 +47,7 @@ class CreateImageTest extends AbstractOpenAITest {
         CreateImage task = CreateImage.builder()
             .apiKey(Property.ofValue(getApiKey()))
             .prompt(Property.ofValue("A funny cat in a black suit"))
-            .size(Property.ofValue(CreateImage.SIZE.SMALL))
+            .size(Property.ofValue(CreateImage.SIZE.LARGE))
             .download(Property.ofValue(Boolean.TRUE))
             .n(1)
             .user(Property.ofValue("test-user"))
