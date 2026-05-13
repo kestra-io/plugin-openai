@@ -13,6 +13,7 @@ import org.apache.commons.io.FileUtils;
 
 import com.openai.client.OpenAIClient;
 import com.openai.models.images.ImageGenerateParams;
+import com.openai.models.images.ImageModel;
 import com.openai.models.images.ImagesResponse;
 
 import io.kestra.core.models.annotations.Example;
@@ -87,6 +88,22 @@ public class CreateImage extends AbstractTask implements RunnableTask<CreateImag
     private Property<SIZE> size = Property.ofValue(SIZE.LARGE);
 
     @Schema(
+        title = "OpenAI image model",
+        description = "Model used to generate images. Defaults to `gpt-image-1`. Any image model accepted by the OpenAI API can be set, e.g. `gpt-image-1-mini`."
+    )
+    @Builder.Default
+    @NotNull
+    @PluginProperty(group = "advanced")
+    private Property<String> model = Property.ofValue("gpt-image-1");
+
+    @Schema(
+        title = "Image quality",
+        description = "One of `auto`, `low`, `medium`, `high`."
+    )
+    @PluginProperty(group = "advanced")
+    private Property<QUALITY> quality;
+
+    @Schema(
         title = "Download generated images",
         description = "Default false. When true, saves Base64 output to Kestra internal storage; when false, returns image URLs."
     )
@@ -101,28 +118,29 @@ public class CreateImage extends AbstractTask implements RunnableTask<CreateImag
 
         String user = runContext.render(this.user == null ? null : runContext.render(this.user).as(String.class).orElseThrow());
         String prompt = runContext.render(this.prompt).as(String.class).orElseThrow();
-        ImageGenerateParams.ResponseFormat responseFormat = runContext.render(this.download).as(Boolean.class).orElseThrow() ? ImageGenerateParams.ResponseFormat.B64_JSON
-            : ImageGenerateParams.ResponseFormat.URL;
+        String model = runContext.render(this.model).as(String.class).orElseThrow();
 
-        ImagesResponse imageResult = client.images().generate(
-            ImageGenerateParams.builder()
-                .prompt(prompt)
-                .size(runContext.render(this.size).as(SIZE.class).orElseThrow().getSize())
-                .n(this.n)
-                .responseFormat(responseFormat)
-                .user(user)
-                .build()
-        );
+        ImageGenerateParams.Builder paramsBuilder = ImageGenerateParams.builder()
+            .model(ImageModel.of(model))
+            .prompt(prompt)
+            .size(runContext.render(this.size).as(SIZE.class).orElseThrow().getSize())
+            .n(this.n)
+            .user(user);
+
+        if (this.quality != null) {
+            runContext.render(this.quality).as(QUALITY.class)
+                .ifPresent(q -> paramsBuilder.quality(q.getQuality()));
+        }
+
+        ImagesResponse imageResult = client.images().generate(paramsBuilder.build());
 
         List<URI> files = new ArrayList<>();
         imageResult.data().stream()
             .flatMap(Collection::stream)
             .forEach(throwConsumer(image ->
             {
-                if (runContext.render(this.download).as(Boolean.class).orElseThrow()) {
-                    if (image.b64Json().isPresent()) {
-                        files.add(runContext.storage().putFile(this.downloadB64Json(image.b64Json().get())));
-                    }
+                if (image.b64Json().isPresent()) {
+                    files.add(runContext.storage().putFile(this.downloadB64Json(image.b64Json().get())));
                 } else {
                     image.url().ifPresent(url -> files.add(URI.create(url)));
                 }
@@ -167,6 +185,23 @@ public class CreateImage extends AbstractTask implements RunnableTask<CreateImag
             return size;
         }
 
+    }
+
+    protected enum QUALITY {
+        AUTO(ImageGenerateParams.Quality.AUTO),
+        LOW(ImageGenerateParams.Quality.LOW),
+        MEDIUM(ImageGenerateParams.Quality.MEDIUM),
+        HIGH(ImageGenerateParams.Quality.HIGH);
+
+        private final ImageGenerateParams.Quality quality;
+
+        QUALITY(ImageGenerateParams.Quality quality) {
+            this.quality = quality;
+        }
+
+        public ImageGenerateParams.Quality getQuality() {
+            return quality;
+        }
     }
 
 }
