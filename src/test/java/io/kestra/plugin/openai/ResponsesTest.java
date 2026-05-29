@@ -43,7 +43,7 @@ public class ResponsesTest extends AbstractOpenAITest {
             .input(Property.ofValue("Explain what Kestra is in one sentence."))
             .build();
 
-        Responses.Output output = task.run(runContext);
+        Responses.Output output = skipOnRateLimit(() -> task.run(runContext));
 
         assertNotNull(output);
         assertNotNull(output.getResponseId());
@@ -70,7 +70,7 @@ public class ResponsesTest extends AbstractOpenAITest {
             .input(Property.ofValue("asdf")) // not a typo: prompt by ID tells model to return uppercase of input
             .build();
 
-        Responses.Output output = task.run(runContext);
+        Responses.Output output = skipOnRateLimit(() -> task.run(runContext));
 
         assertNotNull(output);
         assertNotNull(output.getResponseId());
@@ -98,7 +98,7 @@ public class ResponsesTest extends AbstractOpenAITest {
             .promptVariables(Property.ofValue(Map.of("suffix", "mation")))
             .build();
 
-        Responses.Output output = task.run(runContext);
+        Responses.Output output = skipOnRateLimit(() -> task.run(runContext));
 
         assertNotNull(output);
         assertNotNull(output.getResponseId());
@@ -128,7 +128,7 @@ public class ResponsesTest extends AbstractOpenAITest {
             .toolChoice(io.kestra.core.models.property.Property.ofValue(Responses.ToolChoice.REQUIRED))
             .build();
 
-        Responses.Output output = task.run(runContext);
+        Responses.Output output = skipOnRateLimit(() -> task.run(runContext));
 
         assertNotNull(output);
         assertNotNull(output.getOutputText());
@@ -176,7 +176,7 @@ public class ResponsesTest extends AbstractOpenAITest {
             .toolChoice(io.kestra.core.models.property.Property.ofValue(Responses.ToolChoice.REQUIRED))
             .build();
 
-        Responses.Output output = task.run(runContext);
+        Responses.Output output = skipOnRateLimit(() -> task.run(runContext));
 
         assertNotNull(output);
         assertNotNull(output.getOutputText());

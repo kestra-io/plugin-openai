@@ -47,7 +47,7 @@ class UploadFileTest extends AbstractOpenAITest {
             .purpose(Property.ofValue("user_data"))
             .build();
 
-        UploadFile.Output runOutput = task.run(runContext);
+        UploadFile.Output runOutput = skipOnRateLimit(() -> task.run(runContext));
 
         assertThat(runOutput.getFileId(), notNullValue());
     }
