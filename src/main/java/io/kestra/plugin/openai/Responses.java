@@ -115,7 +115,7 @@ import io.kestra.core.models.annotations.PluginProperty;
                           country: DE
 
                   - id: mail
-                    type: io.kestra.plugin.notifications.mail.MailSend
+                    type: io.kestra.plugin.email.MailSend
                     from: your_email
                     to: your_email
                     username: your_email
