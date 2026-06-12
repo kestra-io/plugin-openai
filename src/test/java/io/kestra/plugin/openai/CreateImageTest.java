@@ -35,7 +35,7 @@ class CreateImageTest extends AbstractOpenAITest {
             .user(Property.ofValue("test-user"))
             .build();
 
-        CreateImage.Output runOutput = task.run(runContext);
+        CreateImage.Output runOutput = skipOnRateLimit(() -> task.run(runContext));
 
         assertThat(runOutput.getImages().size(), is(1));
     }
@@ -53,7 +53,7 @@ class CreateImageTest extends AbstractOpenAITest {
             .user(Property.ofValue("test-user"))
             .build();
 
-        CreateImage.Output runOutput = task.run(runContext);
+        CreateImage.Output runOutput = skipOnRateLimit(() -> task.run(runContext));
 
         assertThat(runOutput.getImages().size(), is(1));
     }

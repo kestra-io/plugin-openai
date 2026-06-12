@@ -41,7 +41,7 @@ class ChatCompletionTest extends AbstractOpenAITest {
             .maxTokens(Property.ofValue(15L))
             .build();
 
-        ChatCompletion.Output runOutput = task.run(runContext);
+        ChatCompletion.Output runOutput = skipOnRateLimit(() -> task.run(runContext));
 
         assertThat(runOutput.getChoices().getFirst().message().content().get(), containsString("Paris"));
         assertThat(runOutput.getModel(), containsString("gpt-4o"));
@@ -58,7 +58,7 @@ class ChatCompletionTest extends AbstractOpenAITest {
             .prompt(Property.ofValue("what is the capital of France?"))
             .build();
 
-        ChatCompletion.Output runOutput = task.run(runContext);
+        ChatCompletion.Output runOutput = skipOnRateLimit(() -> task.run(runContext));
 
         assertThat(runOutput.getChoices().getFirst().message().content().get(), containsString("Paris"));
         assertThat(runOutput.getModel(), containsString("gpt-4o"));
@@ -81,7 +81,7 @@ class ChatCompletionTest extends AbstractOpenAITest {
             .prompt(Property.ofValue("and the capital of germany?"))
             .build();
 
-        ChatCompletion.Output runOutput = task.run(runContext);
+        ChatCompletion.Output runOutput = skipOnRateLimit(() -> task.run(runContext));
 
         assertThat(runOutput.getChoices().getFirst().message().content().get(), containsString("Berlin"));
         assertThat(runOutput.getModel(), containsString("gpt-4o"));
@@ -127,7 +127,7 @@ class ChatCompletionTest extends AbstractOpenAITest {
             .functionCall(Property.ofValue("test"))
             .build();
 
-        ChatCompletion.Output runOutput = task.run(runContext);
+        ChatCompletion.Output runOutput = skipOnRateLimit(() -> task.run(runContext));
         var functionCall = runOutput.getChoices().getFirst().message().toolCalls()
             .get().getFirst().asFunction().function();
 
@@ -183,7 +183,7 @@ class ChatCompletionTest extends AbstractOpenAITest {
             .maxTokens(Property.ofValue(50L))
             .build();
 
-        ChatCompletion.Output runOutput = task.run(runContext);
+        ChatCompletion.Output runOutput = skipOnRateLimit(() -> task.run(runContext));
         var functionCall = runOutput.getChoices().getFirst().message()
             .toolCalls().orElse(List.of())
             .getFirst().asFunction().function();

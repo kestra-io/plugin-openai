@@ -1,6 +1,11 @@
 package io.kestra.plugin.openai;
 
+import java.util.concurrent.Callable;
+
 import org.assertj.core.util.Strings;
+import org.junit.jupiter.api.Assumptions;
+
+import com.openai.errors.OpenAIServiceException;
 
 import io.kestra.core.junit.annotations.KestraTest;
 
@@ -54,5 +59,22 @@ public class AbstractOpenAITest {
 
     protected static String getPromptIdToUpperSuffix() {
         return PROMPT_ID_TO_UPPER_SUFFIX;
+    }
+
+    // Skips the test on provider-side quota/billing/rate-limit errors instead of failing it.
+    protected static <T> T skipOnRateLimit(Callable<T> call) throws Exception {
+        try {
+            return call.call();
+        } catch (OpenAIServiceException e) {
+            String message = String.valueOf(e.getMessage()).toLowerCase();
+            if (e.statusCode() == 429
+                || message.contains("quota")
+                || message.contains("billing")
+                || message.contains("limit")) {
+                Assumptions.abort("Skipped: OpenAI API quota/billing/rate limit reached");
+                return null;
+            }
+            throw e;
+        }
     }
 }
