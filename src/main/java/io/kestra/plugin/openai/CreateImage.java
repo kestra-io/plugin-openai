@@ -55,7 +55,7 @@ import io.kestra.core.models.annotations.PluginProperty;
                   - id: create_image
                     type: io.kestra.plugin.openai.CreateImage
                     prompt: A funny cat in a black suit
-                    apiKey: <your-api-key>
+                    apiKey: "{{ secret('OPENAI_API_KEY') }}"
                     download: true
                     n: 5
                 """
