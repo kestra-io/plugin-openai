@@ -32,7 +32,7 @@ import io.kestra.core.models.annotations.PluginProperty;
 @NoArgsConstructor
 @Schema(
     title = "Send prompts to OpenAI Chat Completions",
-    description = "Calls the OpenAI [Chat Completions API docs](https://platform.openai.com/docs/guides/gpt/chat-completions-api) with a prompt or message list, optional tool calls, and optional JSON Schema structured output. Requires either `prompt` or `messages`; defaults to OpenAI sampling limits and records token usage metrics."
+    description = "Calls the OpenAI [Chat Completions API docs](https://developers.openai.com/api/docs/guides/text) with a prompt or message list, optional tool calls, and optional JSON Schema structured output. Requires either `prompt` or `messages`; defaults to OpenAI sampling limits and records token usage metrics."
 )
 @Plugin(
     examples = {
