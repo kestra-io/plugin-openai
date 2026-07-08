@@ -31,7 +31,7 @@ import io.kestra.core.models.annotations.PluginProperty;
 @NoArgsConstructor
 @Schema(
     title = "Call OpenAI Responses with tools",
-    description = "Uses the Responses API for chat, tool calls, and structured text output. Supports web/file search and function tools, optional JSON Schema formatting, continuation via `previousResponseId`, and persistence enabled by default. See the [Responses docs](https://platform.openai.com/docs/guides/responses)."
+    description = "Uses the Responses API for chat, tool calls, and structured text output. Supports web/file search and function tools, optional JSON Schema formatting, continuation via `previousResponseId`, and persistence enabled by default. See the [Responses docs](https://developers.openai.com/api/docs/guides/text)."
 )
 @Plugin(
     examples = {
