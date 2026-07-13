@@ -31,7 +31,7 @@ import io.kestra.core.models.annotations.PluginProperty;
 @NoArgsConstructor
 @Schema(
     title = "Call OpenAI Responses with tools",
-    description = "Uses the Responses API for chat, tool calls, and structured text output. Supports web/file search and function tools, optional JSON Schema formatting, continuation via `previousResponseId`, and persistence enabled by default. See the [Responses docs](https://platform.openai.com/docs/guides/responses)."
+    description = "Uses the Responses API for chat, tool calls, and structured text output. Supports web/file search and function tools, optional JSON Schema formatting, continuation via `previousResponseId`, and persistence enabled by default. See the [Responses docs](https://developers.openai.com/api/docs/guides/text)."
 )
 @Plugin(
     examples = {
@@ -79,7 +79,7 @@ import io.kestra.core.models.annotations.PluginProperty;
                     input: "{{ inputs.prompt }}"
                     toolChoice: REQUIRED
                     tools:
-                      - type: web_search_preview
+                      - type: web_search
 
                   - id: log
                     type: io.kestra.plugin.core.log.Log
@@ -106,7 +106,7 @@ import io.kestra.core.models.annotations.PluginProperty;
                     input: "{{ inputs.prompt }}"
                     toolChoice: REQUIRED
                     tools:
-                      - type: web_search_preview
+                      - type: web_search
                         search_context_size: low  # optional; low, medium, high
                         user_location:
                           type: approximate # OpenAI doesn't provide other types atm, and it cannot be omitted
@@ -367,7 +367,7 @@ public class Responses extends AbstractTask implements RunnableTask<Responses.Ou
 
     @Schema(
         title = "Enabled tools",
-        description = "List of tool objects (web_search_preview, file_search, function, etc.) sent to the API."
+        description = "List of tool objects (web_search, file_search, function, etc.) sent to the API."
     )
     @PluginProperty(group = "destination")
     private Property<List<Map<String, Object>>> tools;

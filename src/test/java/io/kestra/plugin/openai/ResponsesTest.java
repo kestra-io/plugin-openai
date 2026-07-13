@@ -112,7 +112,7 @@ public class ResponsesTest extends AbstractOpenAITest {
         RunContext runContext = runContextFactory.of();
 
         Map<String, Object> webSearchTool = Map.of(
-            "type", "web_search_preview",
+            "type", "web_search",
             "search_context_size", "low",
             "user_location", Map.of("type", "approximate", "city", "Berlin", "region", "Berlin", "country", "DE")
         );
