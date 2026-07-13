@@ -61,6 +61,33 @@ import io.kestra.core.models.annotations.PluginProperty;
         ),
         @Example(
             full = true,
+            title = "Pass a list of messages with different roles as `input` instead of a single string. Each message holds a `content` list where every entry declares its `type` (e.g., `input_text`) and value.",
+            code = """
+                id: openai_roles
+                namespace: company.team
+
+                tasks:
+                  - id: openai
+                    type: io.kestra.plugin.openai.Responses
+                    apiKey: "{{ secret('OPENAI_API_KEY') }}"
+                    model: gpt-4.1-mini
+                    input:
+                      - role: system
+                        content:
+                          - type: input_text
+                            text: "Only respond with a single sentence"
+                      - role: user
+                        content:
+                          - type: input_text
+                            text: "Explain what is Kestra"
+
+                  - id: log
+                    type: io.kestra.plugin.core.log.Log
+                    message: "{{ outputs.openai.outputText }}"
+                """
+        ),
+        @Example(
+            full = true,
             title = "Use the OpenAI's web-search tool to find recent trends in workflow orchestration.",
             code = """
                 id: web_search
@@ -352,7 +379,26 @@ public class Responses extends AbstractTask implements RunnableTask<Responses.Ou
 
     @Schema(
         title = "Input payload",
-        description = "String or structured `input` list for the conversation; required."
+        description = """
+            The conversation input. Accepts two formats:
+
+            - **String**: a single text prompt (`input: "Explain what is Kestra"`). The plugin sends it as one `user` message.
+            - **List**: a list of message objects for multi-turn or multi-role conversations. Each item has a `role` (`user`, `system`, `assistant`, or `developer`) and a `content` list. Each content entry has a `type` (usually `input_text`) and the corresponding value (`text`).
+
+            Example list format:
+            ```yaml
+            input:
+              - role: system
+                content:
+                  - type: input_text
+                    text: "Only respond with a single sentence"
+              - role: user
+                content:
+                  - type: input_text
+                    text: "Explain what is Kestra"
+            ```
+
+            See the [Responses input docs](https://developers.openai.com/api/reference/resources/responses)."""
     )
     @NotNull
     @PluginProperty(group = "main")
