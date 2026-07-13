@@ -67,7 +67,7 @@ dependencies {
         exclude group: 'org.jetbrains.kotlin'
     }
 
-    api 'com.fasterxml.jackson.module:jackson-module-kotlin:2.22.0'
+    api 'com.fasterxml.jackson.module:jackson-module-kotlin:2.22.1'
 }
 
 
