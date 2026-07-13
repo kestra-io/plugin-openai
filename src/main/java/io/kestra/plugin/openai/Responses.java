@@ -61,7 +61,7 @@ import io.kestra.core.models.annotations.PluginProperty;
         ),
         @Example(
             full = true,
-            title = "Pass a list of messages with different roles as `input` instead of a single string. Each message holds a `content` list where every entry declares its `type` (for example `input_text`) and value.",
+            title = "Pass a list of messages with different roles as `input` instead of a single string. Each message holds a `content` list where every entry declares its `type` (e.g., `input_text`) and value.",
             code = """
                 id: openai_roles
                 namespace: company.team
@@ -382,7 +382,7 @@ public class Responses extends AbstractTask implements RunnableTask<Responses.Ou
         description = """
             The conversation input. Accepts two formats:
 
-            - **String**: a single text prompt, e.g. `input: "Explain what is Kestra"`. The plugin sends it as one `user` message.
+            - **String**: a single text prompt (`input: "Explain what is Kestra"`). The plugin sends it as one `user` message.
             - **List**: a list of message objects for multi-turn or multi-role conversations. Each item has a `role` (`user`, `system`, `assistant`, or `developer`) and a `content` list. Each content entry has a `type` (usually `input_text`) and the corresponding value (`text`).
 
             Example list format:
