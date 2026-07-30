@@ -12,6 +12,7 @@ import org.slf4j.LoggerFactory;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.openai.core.ObjectMappers;
 import com.openai.models.responses.*;
 
 import io.kestra.core.exceptions.IllegalVariableEvaluationException;
@@ -27,6 +28,11 @@ import static io.kestra.core.utils.Rethrow.throwFunction;
 public final class ParametersUtils {
     private static final Logger logger = LoggerFactory.getLogger(ParametersUtils.class);
     public static final ObjectMapper OBJECT_MAPPER = JacksonMapper.ofJson();
+    /**
+     * Mapper of the OpenAI SDK: it knows the Kotlin defaults of the SDK models, so fields the user did not
+     * provide stay missing instead of being serialized as explicit `null`, which the API rejects.
+     */
+    public static final ObjectMapper SDK_OBJECT_MAPPER = ObjectMappers.jsonMapper();
     private static final String BASE64_PREFIX = "data:";
 
     private ParametersUtils() {

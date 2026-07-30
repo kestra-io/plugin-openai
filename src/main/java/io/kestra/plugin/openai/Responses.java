@@ -535,7 +535,7 @@ public class Responses extends AbstractTask implements RunnableTask<Responses.Ou
         if (renderedPromptId != null) {
             final var promptBuilder = ResponsePrompt.builder()
                 .id(renderedPromptId);
-            if (renderedPromptVariables != null) {
+            if (renderedPromptVariables != null && !renderedPromptVariables.isEmpty()) {
                 final var renderedVariables = ParametersUtils.OBJECT_MAPPER.convertValue(
                     renderedPromptVariables,
                     com.openai.models.responses.ResponsePrompt.Variables.class
@@ -559,8 +559,8 @@ public class Responses extends AbstractTask implements RunnableTask<Responses.Ou
             paramsBuilder.previousResponseId(renderedPreviousResponseId);
         }
 
-        if (renderedReasoningMap != null) {
-            com.openai.models.Reasoning renderedReasoning = ParametersUtils.OBJECT_MAPPER.convertValue(
+        if (renderedReasoningMap != null && !renderedReasoningMap.isEmpty()) {
+            com.openai.models.Reasoning renderedReasoning = ParametersUtils.SDK_OBJECT_MAPPER.convertValue(
                 renderedReasoningMap,
                 com.openai.models.Reasoning.class
             );
@@ -575,7 +575,7 @@ public class Responses extends AbstractTask implements RunnableTask<Responses.Ou
             paramsBuilder.parallelToolCalls(parallelCalls);
         }
 
-        if (renderedTextFormat != null) {
+        if (renderedTextFormat != null && !renderedTextFormat.isEmpty()) {
             ResponseTextConfig textFormat = ParametersUtils.OBJECT_MAPPER.convertValue(renderedTextFormat, ResponseTextConfig.class);
             paramsBuilder.text(textFormat);
         }
