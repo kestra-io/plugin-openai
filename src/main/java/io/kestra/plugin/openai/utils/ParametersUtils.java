@@ -65,7 +65,7 @@ public final class ParametersUtils {
     }
 
     private static List<ResponseInputItem.Message> convertToMessages(RunContext runContext, List<Map<String, Object>> renderedList) throws Exception {
-        List<ResponseInputItem.Message> messages = OBJECT_MAPPER.convertValue(
+        List<ResponseInputItem.Message> messages = SDK_OBJECT_MAPPER.convertValue(
             renderedList, new TypeReference<>() {
             }
         );

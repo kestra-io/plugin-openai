@@ -536,7 +536,7 @@ public class Responses extends AbstractTask implements RunnableTask<Responses.Ou
             final var promptBuilder = ResponsePrompt.builder()
                 .id(renderedPromptId);
             if (renderedPromptVariables != null && !renderedPromptVariables.isEmpty()) {
-                final var renderedVariables = ParametersUtils.OBJECT_MAPPER.convertValue(
+                final var renderedVariables = ParametersUtils.SDK_OBJECT_MAPPER.convertValue(
                     renderedPromptVariables,
                     com.openai.models.responses.ResponsePrompt.Variables.class
                 );
@@ -547,7 +547,7 @@ public class Responses extends AbstractTask implements RunnableTask<Responses.Ou
 
         if (renderedTools != null && !renderedTools.isEmpty()) {
             List<Tool> sdkTools = renderedTools.stream()
-                .map(t -> ParametersUtils.OBJECT_MAPPER.convertValue(t, com.openai.models.responses.Tool.class))
+                .map(t -> ParametersUtils.SDK_OBJECT_MAPPER.convertValue(t, com.openai.models.responses.Tool.class))
                 .toList();
 
             paramsBuilder.tools(sdkTools);
@@ -576,7 +576,7 @@ public class Responses extends AbstractTask implements RunnableTask<Responses.Ou
         }
 
         if (renderedTextFormat != null && !renderedTextFormat.isEmpty()) {
-            ResponseTextConfig textFormat = ParametersUtils.OBJECT_MAPPER.convertValue(renderedTextFormat, ResponseTextConfig.class);
+            ResponseTextConfig textFormat = ParametersUtils.SDK_OBJECT_MAPPER.convertValue(renderedTextFormat, ResponseTextConfig.class);
             paramsBuilder.text(textFormat);
         }
 
