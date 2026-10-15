@@ -51,7 +51,7 @@ import lombok.experimental.SuperBuilder;
                   - id: upload_file
                     type: io.kestra.plugin.openai.UploadFile
                     apiKey: "{{ secret('OPENAI_API_KEY') }}"
-                    file: "{{ inputs.dataFile }}"
+                    from: "{{ inputs.dataFile }}"
                     purpose: "fine-tune"
 
                   - id: use_file_id
@@ -61,7 +61,7 @@ import lombok.experimental.SuperBuilder;
         ),
         @Example(
             full = true,
-            title = "Upload a user data file with description for search purposes",
+            title = "Upload a user data file with description for user data purposes",
             code = """
                 id: openai_search_file
                 namespace: company.team
@@ -74,8 +74,8 @@ import lombok.experimental.SuperBuilder;
                   - id: upload
                     type: io.kestra.plugin.openai.UploadFile
                     apiKey: "{{ secret('OPENAI_API_KEY') }}"
-                    file: "{{ inputs.documentFile }}"
-                    purpose: "search"
+                    from: "{{ inputs.documentFile }}"
+                    purpose: "user_data"
                     description: "Customer knowledge base articles for retrieval"
                 """
         )
