@@ -18,6 +18,7 @@ import com.openai.models.images.ImagesResponse;
 
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
+import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
@@ -32,7 +33,6 @@ import lombok.ToString;
 import lombok.experimental.SuperBuilder;
 
 import static io.kestra.core.utils.Rethrow.throwConsumer;
-import io.kestra.core.models.annotations.PluginProperty;
 
 @SuperBuilder
 @ToString
@@ -41,7 +41,7 @@ import io.kestra.core.models.annotations.PluginProperty;
 @NoArgsConstructor
 @Schema(
     title = "Generate images with OpenAI",
-    description = "Creates one or more images from a prompt using OpenAI Images. Default size is 1024x1024; optionally download Base64 content into Kestra internal storage or return remote URLs. See the [Images API docs](https://platform.openai.com/docs/api-reference/images/create)."
+    description = "Creates one or more images from a prompt using OpenAI Images. Default size is 1024x1024. DALL-E images can be returned as remote URLs or stored in Kestra internal storage with `download: true`; GPT Image results are always stored. See the [Images API docs](https://platform.openai.com/docs/api-reference/images/create)."
 )
 @Plugin(
     examples = {
@@ -105,17 +105,14 @@ public class CreateImage extends AbstractTask implements RunnableTask<CreateImag
 
     @Schema(
         title = "Download generated images",
-        description = "Default false. When true, saves Base64 output to Kestra internal storage; when false, returns image URLs."
+        description = "Defaults to false. For `dall-e-*` models, true requests Base64 output and stores the images in Kestra internal storage; false returns image URLs. `gpt-image-*` models always return Base64, so their images are stored regardless of this setting."
     )
     @Builder.Default
     @NotNull
     @PluginProperty(group = "advanced")
     private Property<Boolean> download = Property.ofValue(Boolean.FALSE);
 
-    @Override
-    public CreateImage.Output run(RunContext runContext) throws Exception {
-        OpenAIClient client = this.openAIClient(runContext);
-
+    ImageGenerateParams buildParams(RunContext runContext) throws Exception {
         String user = runContext.render(this.user == null ? null : runContext.render(this.user).as(String.class).orElseThrow());
         String prompt = runContext.render(this.prompt).as(String.class).orElseThrow();
         String model = runContext.render(this.model).as(String.class).orElseThrow();
@@ -123,16 +120,39 @@ public class CreateImage extends AbstractTask implements RunnableTask<CreateImag
         ImageGenerateParams.Builder paramsBuilder = ImageGenerateParams.builder()
             .model(ImageModel.of(model))
             .prompt(prompt)
-            .size(runContext.render(this.size).as(SIZE.class).orElseThrow().getSize())
-            .n(this.n)
-            .user(user);
+            .size(runContext.render(this.size).as(SIZE.class).orElseThrow().getSize());
+
+        if (this.n != null) {
+            paramsBuilder.n(this.n.longValue());
+        }
+
+        if (user != null) {
+            paramsBuilder.user(user);
+        }
 
         if (this.quality != null) {
             runContext.render(this.quality).as(QUALITY.class)
                 .ifPresent(q -> paramsBuilder.quality(q.getQuality()));
         }
 
-        ImagesResponse imageResult = client.images().generate(paramsBuilder.build());
+        Boolean download = runContext.render(this.download).as(Boolean.class).orElse(Boolean.FALSE);
+        if (Boolean.TRUE.equals(download) && isDallE(model)) {
+            paramsBuilder.responseFormat(ImageGenerateParams.ResponseFormat.B64_JSON);
+        }
+
+        return paramsBuilder.build();
+    }
+
+    private static boolean isDallE(String model) {
+        return model != null && model.toLowerCase().startsWith("dall-e");
+    }
+
+    @Override
+    public CreateImage.Output run(RunContext runContext) throws Exception {
+        OpenAIClient client = this.openAIClient(runContext);
+
+        ImageGenerateParams params = this.buildParams(runContext);
+        ImagesResponse imageResult = client.images().generate(params);
 
         List<URI> files = new ArrayList<>();
         imageResult.data().stream()
@@ -155,7 +175,7 @@ public class CreateImage extends AbstractTask implements RunnableTask<CreateImag
 
         @Schema(
             title = "Generated images",
-            description = "List of internal storage URIs or remote URLs depending on `download`."
+            description = "List of image URIs. DALL-E returns remote URLs when `download` is false and Kestra internal storage URIs when true. GPT Image always returns internal storage URIs."
         )
         private List<URI> images;
     }
