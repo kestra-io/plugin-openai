@@ -103,6 +103,7 @@ dependencies {
     testImplementation "org.junit.jupiter:junit-jupiter-engine"
     testImplementation "org.hamcrest:hamcrest"
     testImplementation "org.hamcrest:hamcrest-library"
+    testImplementation "org.mockito:mockito-core:5.20.0"
 
     //assertj
     testImplementation 'org.assertj:assertj-core'

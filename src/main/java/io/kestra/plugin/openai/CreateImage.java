@@ -41,7 +41,7 @@ import static io.kestra.core.utils.Rethrow.throwConsumer;
 @NoArgsConstructor
 @Schema(
     title = "Generate images with OpenAI",
-    description = "Creates one or more images from a prompt using OpenAI Images. Default size is 1024x1024. DALL-E images can be returned as remote URLs or stored in Kestra internal storage with `download: true`; GPT Image results are always stored. See the [Images API docs](https://platform.openai.com/docs/api-reference/images/create)."
+    description = "Creates one or more images from a prompt using OpenAI Images. Default size is 1024x1024. GPT Image results are stored in Kestra internal storage. For legacy DALL-E requests, `download: true` requests content for internal storage instead of a remote URL. OpenAI retired DALL-E 2 and 3 in May 2026. See the [Images API docs](https://platform.openai.com/docs/api-reference/images/create)."
 )
 @Plugin(
     examples = {
@@ -56,8 +56,7 @@ import static io.kestra.core.utils.Rethrow.throwConsumer;
                     type: io.kestra.plugin.openai.CreateImage
                     prompt: A funny cat in a black suit
                     apiKey: "{{ secret('OPENAI_API_KEY') }}"
-                    download: true
-                    n: 5
+                    model: gpt-image-1
                 """
         )
     }
@@ -105,7 +104,7 @@ public class CreateImage extends AbstractTask implements RunnableTask<CreateImag
 
     @Schema(
         title = "Download generated images",
-        description = "Defaults to false. For `dall-e-*` models, true requests Base64 output and stores the images in Kestra internal storage; false returns image URLs. `gpt-image-*` models always return Base64, so their images are stored regardless of this setting."
+        description = "Defaults to false. For legacy `dall-e-*` models, true requests Base64 output and stores the images in Kestra internal storage; false returns image URLs. `gpt-image-*` models always return Base64, so their images are stored regardless of this setting."
     )
     @Builder.Default
     @NotNull
@@ -135,8 +134,8 @@ public class CreateImage extends AbstractTask implements RunnableTask<CreateImag
                 .ifPresent(q -> paramsBuilder.quality(q.getQuality()));
         }
 
-        Boolean download = runContext.render(this.download).as(Boolean.class).orElse(Boolean.FALSE);
-        if (Boolean.TRUE.equals(download) && isDallE(model)) {
+        Boolean rDownload = runContext.render(this.download).as(Boolean.class).orElse(Boolean.FALSE);
+        if (Boolean.TRUE.equals(rDownload) && isDallE(model)) {
             paramsBuilder.responseFormat(ImageGenerateParams.ResponseFormat.B64_JSON);
         }
 
@@ -175,7 +174,7 @@ public class CreateImage extends AbstractTask implements RunnableTask<CreateImag
 
         @Schema(
             title = "Generated images",
-            description = "List of image URIs. DALL-E returns remote URLs when `download` is false and Kestra internal storage URIs when true. GPT Image always returns internal storage URIs."
+            description = "List of image URIs. Legacy DALL-E returns remote URLs when `download` is false and Kestra internal storage URIs when true. GPT Image always returns internal storage URIs."
         )
         private List<URI> images;
     }

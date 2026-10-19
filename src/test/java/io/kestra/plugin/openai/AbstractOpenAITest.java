@@ -67,10 +67,12 @@ public class AbstractOpenAITest {
             return call.call();
         } catch (OpenAIServiceException e) {
             String message = String.valueOf(e.getMessage()).toLowerCase();
-            if (e.statusCode() == 429
-                || message.contains("quota")
-                || message.contains("billing")
-                || message.contains("limit")) {
+            if (
+                e.statusCode() == 429
+                    || message.contains("quota")
+                    || message.contains("billing")
+                    || message.contains("limit")
+            ) {
                 Assumptions.abort("Skipped: OpenAI API quota/billing/rate limit reached");
                 return null;
             }
