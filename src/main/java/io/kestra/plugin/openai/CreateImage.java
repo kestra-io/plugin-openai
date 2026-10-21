@@ -11,10 +11,8 @@ import java.util.UUID;
 
 import org.apache.commons.io.FileUtils;
 
-import com.openai.client.OpenAIClient;
 import com.openai.models.images.ImageGenerateParams;
 import com.openai.models.images.ImageModel;
-import com.openai.models.images.ImagesResponse;
 
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
@@ -41,7 +39,14 @@ import static io.kestra.core.utils.Rethrow.throwConsumer;
 @NoArgsConstructor
 @Schema(
     title = "Generate images with OpenAI",
-    description = "Creates one or more images from a prompt using OpenAI Images. Default size is 1024x1024. GPT Image results are stored in Kestra internal storage. For legacy DALL-E requests, `download: true` requests content for internal storage instead of a remote URL. OpenAI retired DALL-E 2 and 3 in May 2026. See the [Images API docs](https://platform.openai.com/docs/api-reference/images/create)."
+    description = """
+        Creates one or more images from a prompt using OpenAI Images.
+        Default size is 1024x1024.
+        GPT Image results are stored in Kestra internal storage.
+        For legacy DALL-E requests, `download: true` requests content for internal storage instead of a remote URL.
+        OpenAI retired DALL-E 2 and 3 in May 2026.
+        See the [Images API docs](https://platform.openai.com/docs/api-reference/images/create).
+        """
 )
 @Plugin(
     examples = {
@@ -104,7 +109,11 @@ public class CreateImage extends AbstractTask implements RunnableTask<CreateImag
 
     @Schema(
         title = "Download generated images",
-        description = "Defaults to false. For legacy `dall-e-*` models, true requests Base64 output and stores the images in Kestra internal storage; false returns image URLs. `gpt-image-*` models always return Base64, so their images are stored regardless of this setting."
+        description = """
+            Defaults to false.
+            For legacy `dall-e-*` models, true requests Base64 output and stores the images in Kestra internal storage; false returns image URLs.
+            `gpt-image-*` models always return Base64, so their images are stored regardless of this setting.
+            """
     )
     @Builder.Default
     @NotNull
@@ -134,7 +143,7 @@ public class CreateImage extends AbstractTask implements RunnableTask<CreateImag
                 .ifPresent(q -> paramsBuilder.quality(q.getQuality()));
         }
 
-        Boolean rDownload = runContext.render(this.download).as(Boolean.class).orElse(Boolean.FALSE);
+        var rDownload = runContext.render(this.download).as(Boolean.class).orElse(Boolean.FALSE);
         if (Boolean.TRUE.equals(rDownload) && isDallE(model)) {
             paramsBuilder.responseFormat(ImageGenerateParams.ResponseFormat.B64_JSON);
         }
@@ -148,24 +157,27 @@ public class CreateImage extends AbstractTask implements RunnableTask<CreateImag
 
     @Override
     public CreateImage.Output run(RunContext runContext) throws Exception {
-        OpenAIClient client = this.openAIClient(runContext);
+        var client = this.openAIClient(runContext);
+        try {
+            var params = this.buildParams(runContext);
+            var imageResult = client.images().generate(params);
 
-        ImageGenerateParams params = this.buildParams(runContext);
-        ImagesResponse imageResult = client.images().generate(params);
+            List<URI> files = new ArrayList<>();
+            imageResult.data().stream()
+                .flatMap(Collection::stream)
+                .forEach(throwConsumer(image ->
+                {
+                    if (image.b64Json().isPresent()) {
+                        files.add(runContext.storage().putFile(this.downloadB64Json(image.b64Json().get())));
+                    } else {
+                        image.url().ifPresent(url -> files.add(URI.create(url)));
+                    }
+                }));
 
-        List<URI> files = new ArrayList<>();
-        imageResult.data().stream()
-            .flatMap(Collection::stream)
-            .forEach(throwConsumer(image ->
-            {
-                if (image.b64Json().isPresent()) {
-                    files.add(runContext.storage().putFile(this.downloadB64Json(image.b64Json().get())));
-                } else {
-                    image.url().ifPresent(url -> files.add(URI.create(url)));
-                }
-            }));
-
-        return Output.builder().images(files).build();
+            return Output.builder().images(files).build();
+        } finally {
+            client.close();
+        }
     }
 
     @Builder
@@ -174,7 +186,11 @@ public class CreateImage extends AbstractTask implements RunnableTask<CreateImag
 
         @Schema(
             title = "Generated images",
-            description = "List of image URIs. Legacy DALL-E returns remote URLs when `download` is false and Kestra internal storage URIs when true. GPT Image always returns internal storage URIs."
+            description = """
+                List of image URIs.
+                Legacy DALL-E returns remote URLs when `download` is false and Kestra internal storage URIs when true.
+                GPT Image always returns internal storage URIs.
+                """
         )
         private List<URI> images;
     }

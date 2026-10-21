@@ -7,6 +7,8 @@ import java.util.List;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledIf;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.mockito.ArgumentCaptor;
 
 import com.openai.client.OpenAIClient;
@@ -25,8 +27,10 @@ import jakarta.inject.Inject;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
@@ -56,6 +60,7 @@ class CreateImageTest extends AbstractOpenAITest {
         }
         var params = ArgumentCaptor.forClass(ImageGenerateParams.class);
         verify(stub.imageService()).generate(params.capture());
+        verify(stub.client()).close();
         assertThat(params.getValue().responseFormat().orElseThrow(), is(ImageGenerateParams.ResponseFormat.B64_JSON));
     }
 
@@ -74,6 +79,7 @@ class CreateImageTest extends AbstractOpenAITest {
         assertThat(output.getImages(), is(List.of(remoteUri)));
         var params = ArgumentCaptor.forClass(ImageGenerateParams.class);
         verify(stub.imageService()).generate(params.capture());
+        verify(stub.client()).close();
         assertThat(params.getValue().responseFormat().isEmpty(), is(true));
     }
 
@@ -93,7 +99,20 @@ class CreateImageTest extends AbstractOpenAITest {
         assertThat(runContext.storage().isFileExist(output.getImages().getFirst()), is(true));
         var params = ArgumentCaptor.forClass(ImageGenerateParams.class);
         verify(stub.imageService()).generate(params.capture());
+        verify(stub.client()).close();
         assertThat(params.getValue().responseFormat().isEmpty(), is(true));
+    }
+
+    @Test
+    void runClosesClientWhenGenerationFails() throws Exception {
+        var response = ImagesResponse.builder().created(1L).build();
+        var stub = taskWithResponse(false, response);
+        doThrow(new IllegalStateException("Generation failed"))
+            .when(stub.imageService()).generate(any(ImageGenerateParams.class));
+
+        assertThrows(IllegalStateException.class, () -> stub.task().run(runContextFactory.of()));
+
+        verify(stub.client()).close();
     }
 
     private static StubbedTask taskWithResponse(boolean download, ImagesResponse response) throws Exception {
@@ -116,100 +135,39 @@ class CreateImageTest extends AbstractOpenAITest {
 
         var task = spy(builder.build());
         doReturn(client).when(task).openAIClient(any(RunContext.class));
-        return new StubbedTask(task, imageService);
+        return new StubbedTask(task, client, imageService);
     }
 
-    private record StubbedTask(CreateImage task, ImageService imageService) {
+    private record StubbedTask(CreateImage task, OpenAIClient client, ImageService imageService) {
     }
 
-    @Test
-    void buildParamsWithDefaultModelDownloadFalseDoesNotSetResponseFormat() throws Exception {
-        RunContext runContext = runContextFactory.of();
-
-        CreateImage task = CreateImage.builder()
+    @ParameterizedTest
+    @CsvSource(
+        {
+            "default, false, false",
+            "default, true, false",
+            "gpt-image-1-mini, true, false",
+            "dall-e-3, false, false",
+            "dall-e-3, true, true",
+            "dall-e-2, true, true"
+        }
+    )
+    void buildParamsSetsResponseFormatForDallEDownloads(String model, boolean download, boolean expectB64) throws Exception {
+        var runContext = runContextFactory.of();
+        var builder = CreateImage.builder()
             .prompt(Property.ofValue("A funny cat in a black suit"))
-            .download(Property.ofValue(Boolean.FALSE))
-            .build();
+            .download(Property.ofValue(download));
+        if (!model.equals("default")) {
+            builder.model(Property.ofValue(model));
+        }
+        var task = builder.build();
 
-        ImageGenerateParams params = task.buildParams(runContext);
+        var params = task.buildParams(runContext);
 
-        assertThat(params.responseFormat().isEmpty(), is(true));
-    }
-
-    @Test
-    void buildParamsWithDefaultModelDownloadTrueDoesNotSetResponseFormat() throws Exception {
-        RunContext runContext = runContextFactory.of();
-
-        CreateImage task = CreateImage.builder()
-            .prompt(Property.ofValue("A funny cat in a black suit"))
-            .download(Property.ofValue(Boolean.TRUE))
-            .build();
-
-        ImageGenerateParams params = task.buildParams(runContext);
-
-        assertThat(params.responseFormat().isEmpty(), is(true));
-    }
-
-    @Test
-    void buildParamsWithGptImageMiniDownloadTrueDoesNotSetResponseFormat() throws Exception {
-        RunContext runContext = runContextFactory.of();
-
-        CreateImage task = CreateImage.builder()
-            .model(Property.ofValue("gpt-image-1-mini"))
-            .prompt(Property.ofValue("A funny cat in a black suit"))
-            .download(Property.ofValue(Boolean.TRUE))
-            .build();
-
-        ImageGenerateParams params = task.buildParams(runContext);
-
-        assertThat(params.responseFormat().isEmpty(), is(true));
-    }
-
-    @Test
-    void buildParamsWithDallEDownloadFalseDoesNotSetResponseFormat() throws Exception {
-        RunContext runContext = runContextFactory.of();
-
-        CreateImage task = CreateImage.builder()
-            .model(Property.ofValue("dall-e-3"))
-            .prompt(Property.ofValue("A funny cat in a black suit"))
-            .download(Property.ofValue(Boolean.FALSE))
-            .build();
-
-        ImageGenerateParams params = task.buildParams(runContext);
-
-        assertThat(params.responseFormat().isEmpty(), is(true));
-    }
-
-    @Test
-    void buildParamsWithDallE3DownloadTrueSetsB64Json() throws Exception {
-        RunContext runContext = runContextFactory.of();
-
-        CreateImage task = CreateImage.builder()
-            .model(Property.ofValue("dall-e-3"))
-            .prompt(Property.ofValue("A funny cat in a black suit"))
-            .download(Property.ofValue(Boolean.TRUE))
-            .build();
-
-        ImageGenerateParams params = task.buildParams(runContext);
-
-        assertThat(params.responseFormat().isPresent(), is(true));
-        assertThat(params.responseFormat().get(), is(ImageGenerateParams.ResponseFormat.B64_JSON));
-    }
-
-    @Test
-    void buildParamsWithDallE2DownloadTrueSetsB64Json() throws Exception {
-        RunContext runContext = runContextFactory.of();
-
-        CreateImage task = CreateImage.builder()
-            .model(Property.ofValue("dall-e-2"))
-            .prompt(Property.ofValue("A funny cat in a black suit"))
-            .download(Property.ofValue(Boolean.TRUE))
-            .build();
-
-        ImageGenerateParams params = task.buildParams(runContext);
-
-        assertThat(params.responseFormat().isPresent(), is(true));
-        assertThat(params.responseFormat().get(), is(ImageGenerateParams.ResponseFormat.B64_JSON));
+        assertThat(params.responseFormat().isPresent(), is(expectB64));
+        if (expectB64) {
+            assertThat(params.responseFormat().orElseThrow(), is(ImageGenerateParams.ResponseFormat.B64_JSON));
+        }
     }
 
     @Test
