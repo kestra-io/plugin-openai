@@ -162,7 +162,7 @@ public class CreateImage extends AbstractTask implements RunnableTask<CreateImag
             var params = this.buildParams(runContext);
             var imageResult = client.images().generate(params);
 
-            List<URI> files = new ArrayList<>();
+            var files = new ArrayList<URI>();
             imageResult.data().stream()
                 .flatMap(Collection::stream)
                 .forEach(throwConsumer(image ->
