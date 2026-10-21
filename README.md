@@ -48,6 +48,24 @@
 - Provides plugin components under `io.kestra.plugin.openai`.
 - Includes classes such as `CreateImage`, `Responses`, `ChatCompletion`, `UploadFile`.
 
+## Create images
+
+`CreateImage` generates an image from a prompt and returns its Kestra internal storage URI:
+
+```yaml
+id: create_image
+namespace: company.team
+
+tasks:
+  - id: generate
+    type: io.kestra.plugin.openai.CreateImage
+    apiKey: "{{ secret('OPENAI_API_KEY') }}"
+    model: gpt-image-1
+    prompt: A funny cat in a black suit
+```
+
+The `download` option applies to legacy DALL-E image requests. For those models, `download: true` requests image data for Kestra internal storage, while `download: false` returns a remote URL. OpenAI retired DALL-E 2 and 3 in May 2026, so these models cannot be used with the current OpenAI API.
+
 ## Documentation
 * Full documentation can be found under [kestra.io/docs](https://kestra.io/docs)
 * Documentation for developing a plugin is included in the [Plugin Developer Guide](https://kestra.io/docs/plugin-developer-guide/).
