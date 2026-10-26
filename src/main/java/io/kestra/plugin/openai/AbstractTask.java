@@ -27,6 +27,8 @@ import lombok.experimental.SuperBuilder;
 @Getter
 @NoArgsConstructor
 public abstract class AbstractTask extends Task implements OpenAiInterface {
+    private static final long DEFAULT_CLIENT_TIMEOUT = 600L;
+
     @Schema(
         title = "OpenAI API key"
     )
@@ -37,28 +39,15 @@ public abstract class AbstractTask extends Task implements OpenAiInterface {
     protected Property<String> user;
 
     @Builder.Default
-    @Min(1)
-    protected Property<Long> clientTimeout = Property.ofValue(600L);
+    protected Property<@Min(1) Long> clientTimeout = Property.ofValue(DEFAULT_CLIENT_TIMEOUT);
 
     protected OpenAIClient openAIClient(RunContext runContext) throws IllegalVariableEvaluationException {
-        var rApiKey = runContext.render(this.apiKey).as(String.class).orElseThrow(() -> new IllegalArgumentException("apiKey is required"));
-        var rClientTimeout = runContext.render(this.clientTimeout).as(Long.class).orElse(600L);
+        var rApiKey = runContext.render(this.apiKey).as(String.class).orElseThrow(() -> new IllegalArgumentException("apiKey is required, set it or reference a secret"));
+        var rClientTimeout = runContext.render(this.clientTimeout).as(Long.class).orElse(DEFAULT_CLIENT_TIMEOUT);
 
         return OpenAIOkHttpClient.builder()
             .apiKey(rApiKey)
             .timeout(Duration.ofSeconds(rClientTimeout))
             .build();
-    }
-
-    public abstract static class AbstractTaskBuilder<C extends AbstractTask, B extends AbstractTaskBuilder<C, B>> extends Task.TaskBuilder<C, B> {
-        public B clientTimeout(Property<Long> clientTimeout) {
-            this.clientTimeout$value = clientTimeout;
-            this.clientTimeout$set = true;
-            return self();
-        }
-
-        public B clientTimeout(long clientTimeout) {
-            return this.clientTimeout(Property.ofValue(clientTimeout));
-        }
     }
 }

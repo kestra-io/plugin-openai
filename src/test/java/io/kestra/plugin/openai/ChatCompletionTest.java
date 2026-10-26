@@ -36,7 +36,7 @@ class ChatCompletionTest extends AbstractOpenAITest {
         ChatCompletion task = ChatCompletion.builder()
             .apiKey(Property.ofValue(getApiKey()))
             .model(Property.ofValue("gpt-4o"))
-            .clientTimeout(30)
+            .clientTimeout(Property.ofValue(30L))
             .messages(Property.ofValue(messages))
             .maxTokens(Property.ofValue(15L))
             .build();

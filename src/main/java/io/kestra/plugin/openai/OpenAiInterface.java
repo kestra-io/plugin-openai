@@ -4,7 +4,6 @@ import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.property.Property;
 
 import io.swagger.v3.oas.annotations.media.Schema;
-import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 
 public interface OpenAiInterface {
@@ -29,6 +28,5 @@ public interface OpenAiInterface {
             """
     )
     @PluginProperty(group = "execution")
-    @Min(1)
     Property<Long> getClientTimeout();
 }
