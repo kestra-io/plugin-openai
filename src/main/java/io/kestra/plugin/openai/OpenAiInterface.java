@@ -4,6 +4,7 @@ import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.property.Property;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 
 public interface OpenAiInterface {
@@ -21,8 +22,13 @@ public interface OpenAiInterface {
     Property<String> getUser();
 
     @Schema(
-        title = "The maximum number of seconds to wait for a response"
+        title = "The maximum number of seconds to wait for a response",
+        description = """
+            The maximum time to wait for API responses, in seconds (minimum 1, default 600 seconds / 10 minutes).
+            Applies per HTTP attempt. The underlying SDK retries twice by default, so a task can wait up to approximately 3 times this value before timing out.
+            """
     )
     @PluginProperty(group = "execution")
-    long getClientTimeout();
+    @Min(1)
+    Property<Long> getClientTimeout();
 }

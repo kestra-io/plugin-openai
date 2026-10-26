@@ -1,5 +1,7 @@
 package io.kestra.plugin.openai;
 
+import java.time.Duration;
+
 import com.openai.client.OpenAIClient;
 import com.openai.client.okhttp.OpenAIOkHttpClient;
 
@@ -10,6 +12,7 @@ import io.kestra.core.models.tasks.Task;
 import io.kestra.core.runners.RunContext;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import lombok.Builder;
 import lombok.EqualsAndHashCode;
@@ -34,11 +37,28 @@ public abstract class AbstractTask extends Task implements OpenAiInterface {
     protected Property<String> user;
 
     @Builder.Default
-    protected long clientTimeout = 10;
+    @Min(1)
+    protected Property<Long> clientTimeout = Property.ofValue(600L);
 
     protected OpenAIClient openAIClient(RunContext runContext) throws IllegalVariableEvaluationException {
-        String apiKey = runContext.render(runContext.render(this.apiKey).as(String.class).orElseThrow());
+        var rApiKey = runContext.render(this.apiKey).as(String.class).orElseThrow(() -> new IllegalArgumentException("apiKey is required"));
+        var rClientTimeout = runContext.render(this.clientTimeout).as(Long.class).orElse(600L);
 
-        return OpenAIOkHttpClient.builder().apiKey(apiKey).build();
+        return OpenAIOkHttpClient.builder()
+            .apiKey(rApiKey)
+            .timeout(Duration.ofSeconds(rClientTimeout))
+            .build();
+    }
+
+    public abstract static class AbstractTaskBuilder<C extends AbstractTask, B extends AbstractTaskBuilder<C, B>> extends Task.TaskBuilder<C, B> {
+        public B clientTimeout(Property<Long> clientTimeout) {
+            this.clientTimeout$value = clientTimeout;
+            this.clientTimeout$set = true;
+            return self();
+        }
+
+        public B clientTimeout(long clientTimeout) {
+            return this.clientTimeout(Property.ofValue(clientTimeout));
+        }
     }
 }
