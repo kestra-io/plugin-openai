@@ -1,16 +1,15 @@
 package io.kestra.plugin.openai;
 
-import java.io.*;
 import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
+import java.util.Locale;
 
 import org.slf4j.Logger;
 
 import com.openai.client.OpenAIClient;
+import com.openai.models.files.FileCreateParams;
 import com.openai.models.files.FilePurpose;
-import com.openai.models.uploads.Upload;
-import com.openai.models.uploads.UploadCreateParams;
 
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
@@ -32,7 +31,7 @@ import lombok.experimental.SuperBuilder;
 @NoArgsConstructor
 @Schema(
     title = "Upload files to OpenAI storage",
-    description = "Sends a file from Kestra internal storage to OpenAI for assistants, fine-tune, search, or other purposes, returning the upload ID. Uses a temp copy locally before upload; unknown purposes fall back to `assistants`."
+    description = "Sends a file from Kestra internal storage to OpenAI for assistants, fine-tune, search, or other purposes, returning the file ID. Uses a temp copy locally before upload; unknown purposes fall back to `assistants`."
 )
 @Plugin(
     examples = {
@@ -111,32 +110,24 @@ public class UploadFile extends AbstractTask implements RunnableTask<UploadFile.
         URI from = URI.create(renderedFrom);
         String extension = FileUtils.getExtension(from);
 
-        java.io.File tempFile = runContext.workingDir().createTempFile(extension).toFile();
+        var tempFile = runContext.workingDir().createTempFile(extension);
 
-        Files.copy(runContext.storage().getFile(from), tempFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+        try (var in = runContext.storage().getFile(from)) {
+            Files.copy(in, tempFile, StandardCopyOption.REPLACE_EXISTING);
+        }
 
-        Upload fileObject = client.uploads().create(buildUploadCreateParams(purpose, tempFile.getPath()));
+        var fileObject = client.files().create(
+            FileCreateParams.builder()
+                .file(tempFile)
+                .purpose(getFilePurpose(purpose))
+                .build()
+        );
 
         return Output.builder().fileId(fileObject.id()).build();
     }
 
-    public UploadCreateParams buildUploadCreateParams(final String purpose, final String filepath) throws IOException {
-        java.io.File file = new java.io.File(filepath);
-        String mimeType = Files.probeContentType(file.toPath());
-        return UploadCreateParams.builder()
-            .body(
-                UploadCreateParams.Body.builder()
-                    .filename(file.getName())
-                    .purpose(getFilePurpose(purpose))
-                    .mimeType(mimeType)
-                    .bytes(file.length())
-                    .build()
-            )
-            .build();
-    }
-
-    private static FilePurpose getFilePurpose(final String purpose) {
-        return switch (purpose.toLowerCase()) {
+    static FilePurpose getFilePurpose(final String purpose) {
+        return switch (purpose.toLowerCase(Locale.ROOT)) {
             case "assistants" -> FilePurpose.ASSISTANTS;
             case "fine-tune" -> FilePurpose.FINE_TUNE;
             case "vision" -> FilePurpose.VISION;
