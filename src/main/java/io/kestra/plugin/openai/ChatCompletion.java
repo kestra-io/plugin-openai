@@ -119,13 +119,13 @@ import lombok.experimental.SuperBuilder;
                             description: The text to post online in response to this review.
                             required: true
 
-                  - id: response_urgency
-                    type: io.kestra.plugin.core.debug.Return
-                    format: "{{ outputs.prioritize_response | jq('.choices[0].message.tool_calls[0].function.arguments | fromjson | .response_urgency') | first }}"
+                  - id: log_response_urgency
+                    type: io.kestra.plugin.core.log.Log
+                    message: "{{ outputs.prioritize_response | jq('.choices[0].message.tool_calls[0].function.arguments | fromjson | .response_urgency') | first }}"
 
-                  - id: response_text
-                    type: io.kestra.plugin.core.debug.Return
-                    format: "{{ outputs.prioritize_response | jq('.choices[0].message.tool_calls[0].function.arguments | fromjson | .response_text') | first }}"
+                  - id: log_response_text
+                    type: io.kestra.plugin.core.log.Log
+                    message: "{{ outputs.prioritize_response | jq('.choices[0].message.tool_calls[0].function.arguments | fromjson | .response_text') | first }}"
                 """
         )
     }
