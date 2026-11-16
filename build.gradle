@@ -57,7 +57,7 @@ dependencies {
     compileOnly group: "io.kestra", name: "core", version: kestraVersion
 
     // libs included in the final jar
-    api (group: 'com.openai', name: 'openai-java', version: '4.96.0') {
+    api (group: 'com.openai', name: 'openai-java', version: '4.101.0') {
         exclude group: 'com.fasterxml.jackson.core'
         exclude group: 'com.fasterxml.jackson.module'
         exclude group: 'com.fasterxml.jackson.datatype'
@@ -65,7 +65,7 @@ dependencies {
         exclude group: 'org.jetbrains.kotlin'
     }
 
-    api 'com.fasterxml.jackson.module:jackson-module-kotlin:2.22.4'
+    api 'com.fasterxml.jackson.module:jackson-module-kotlin:2.23.0'
 }
 
 
